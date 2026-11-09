@@ -1,24 +1,24 @@
 // 과제 솔빙 뷰어 — Claude API 중계 (Netlify Edge Function, 스트리밍)
-// 환경변수: ANTHROPIC_API_KEY (필수), APP_PASSWORD (숫자 4자리), SESSION_SECRET, CLAUDE_MODEL, CLAUDE_MODEL_COMPLEX (선택)
-// 로그인 토큰은 netlify/functions/store.mjs 가 발급 (같은 방식으로 검증)
-async function verifyToken(tok, pin, key) {
-  if (!pin) return true;
+// 환경변수: ANTHROPIC_API_KEY + SESSION_SECRET (둘 다 있어야 AI 켜짐), CLAUDE_MODEL, CLAUDE_MODEL_COMPLEX (선택)
+// 등록된 칩을 비밀번호로 연 사람만 사용 가능 (칩 열쇠는 netlify/functions/store.mjs 가 SESSION_SECRET으로 발급)
+async function verifyChipToken(id, tok, sec) {
   const [exp, mac] = String(tok || '').split('.');
-  if (!exp || !mac || !(+exp > Date.now())) return false;
+  if (!sec || !/^[a-f0-9]{32}$/.test(id || '') || !exp || !mac || !(+exp > Date.now())) return false;
   const enc = new TextEncoder();
-  const sec = await crypto.subtle.digest('SHA-256', enc.encode('hwv|' + pin + '|' + key + '|' + (Netlify.env.get('SESSION_SECRET') || '')));
-  const k = await crypto.subtle.importKey('raw', sec, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(exp)));
+  const k = await crypto.subtle.importKey('raw', enc.encode(sec), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(id + '|' + exp)));
   return [...sig].map(b => b.toString(16).padStart(2, '0')).join('') === mac;
 }
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
 export default async (req) => {
   const key = Netlify.env.get('ANTHROPIC_API_KEY');
-  const pass = Netlify.env.get('APP_PASSWORD') || '';
+  const sec = Netlify.env.get('SESSION_SECRET') || '';
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
   if (!key) return json({ error: 'ANTHROPIC_API_KEY가 설정되지 않았어요' }, 503);
-  if (!(await verifyToken(req.headers.get('x-app-token'), pass, key))) return json({ error: '로그인이 필요해요' }, 401);
+  if (!sec) return json({ error: 'AI를 쓰려면 SESSION_SECRET 환경변수도 넣어야 해요' }, 503);
+  if (!(await verifyChipToken(req.headers.get('x-chip-id'), req.headers.get('x-chip-token'), sec)))
+    return json({ error: '등록한 칩을 비밀번호로 연 상태에서만 AI를 쓸 수 있어요' }, 401);
 
   let body;
   try { body = await req.json(); } catch { return json({ error: '잘못된 요청' }, 400); }

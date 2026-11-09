@@ -184,6 +184,13 @@ details pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--l
 #zoom .zbox{flex:1;overflow:auto;touch-action:pan-x pan-y pinch-zoom;-webkit-overflow-scrolling:touch}
 #zoom img{display:block;background:#fff;margin:0 auto}
 
+.sheet{position:fixed;inset:0;z-index:35;background:rgba(10,12,20,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheetbox{background:var(--card);width:min(560px,100%);border-radius:18px 18px 0 0;padding:20px 18px 26px;box-shadow:0 -6px 30px rgba(0,0,0,.15)}
+@media (min-width:700px){.sheet{align-items:center}.sheetbox{border-radius:18px}}
+.sheetbox h2{margin:0 0 6px;font-size:19px}
+.flabel{display:block;font-size:13.5px;font-weight:600;color:var(--sub);margin-top:10px}
+.flabel .field{margin-top:4px}
+#lock .lockbox{position:static}
 #lock{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding:20px}
 .lockbox{text-align:center;width:min(300px,100%)}
 .lockbox h2{margin:0 0 4px;font-size:22px}
@@ -211,18 +218,20 @@ details pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--l
     <p>칩을 넣으면 문제 · 풀이집 · 답안 검증 · 해설을 한 화면에</p>
   </div>
 
-  <div class="card">
+  <div id="findCard" class="card" hidden>
+    <h2>등록된 칩 찾기</h2>
+    <input id="findIn" class="field" style="margin-top:0" placeholder="제목으로 찾기 (예: 12장)" autocomplete="off">
+    <ul id="findList" class="mylist" style="margin-top:6px"></ul>
+    <p id="findNote" class="note"></p>
+  </div>
+
+  <div id="codeCard" class="card">
     <h2>칩 코드로 열기</h2>
     <div class="row">
       <input id="codeIn" class="input" placeholder="예: CH12-K7Q2" autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button id="codeBtn" class="btn">열기</button>
     </div>
     <p id="codeNote" class="note">등록해 둔 칩은 코드만 입력하면 어느 기기에서든 바로 열려요.</p>
-  </div>
-
-  <div id="aiCard" class="card" hidden>
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">연결 상태</h2><button id="lockBtn" class="del" hidden>잠그기</button></div>
-    <p id="aiState" class="note"></p>
   </div>
 
   <div class="card guide">
@@ -325,7 +334,8 @@ details pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--l
 </div>
 <div id="lock" hidden>
   <div class="lockbox">
-    <h2>과제 솔빙 뷰어</h2>
+    <button id="lockClose" class="iconbtn" style="position:absolute;top:14px;right:14px" aria-label="닫기">✕</button>
+    <h2>칩 열기</h2>
     <p id="lockMsg">비밀번호 4자리</p>
     <div class="dots"><i></i><i></i><i></i><i></i></div>
     <div class="pad">
@@ -334,6 +344,17 @@ details pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--l
       <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
       <span></span><button data-k="0">0</button><button data-k="del" aria-label="지우기">⌫</button>
     </div>
+  </div>
+</div>
+<div id="regSheet" class="sheet" hidden>
+  <div class="sheetbox">
+    <h2>칩 등록하기</h2>
+    <p class="note" style="margin-top:0">제목과 비밀번호 4자리를 정하면, 어느 기기·브라우저에서든 <b>등록된 칩 찾기</b>에서 제목으로 찾고 비밀번호를 넣어 열 수 있어요.</p>
+    <label class="flabel">제목<input id="rTitle" class="field" maxlength="80" autocomplete="off"></label>
+    <label class="flabel">비밀번호 (숫자 4자리)<input id="rPin" class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>
+    <label class="flabel">비밀번호 확인<input id="rPin2" class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>
+    <p id="rMsg" class="note" style="min-height:20px"></p>
+    <div class="actions"><button id="rCancel" class="btn ghost">나중에</button><button id="rOk" class="btn">등록</button></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -588,7 +609,7 @@ const cap = { db:null, uid:null, assets:null, sample:null, downloads:null, ready
   if (S.chip) renderItem();
 })();
 
-/* ===== 일반 웹 호스팅용 (Netlify): PIN 잠금 + 서버 저장(Netlify Blobs) + /api/claude ===== */
+/* ===== 일반 웹 호스팅용 (Netlify): 칩마다 제목 + 비밀번호 4자리로 등록 / 찾기 ===== */
 async function initLocal(){
   cap.local = true;
   cap.downloads = { save: async ({ filename, data }) => {
@@ -600,42 +621,90 @@ async function initLocal(){
   } };
   let st = null;
   try{
-    const r = await fetch('/api/status', { headers:{ 'x-app-token': ls.get('hwv-token', '') } });
+    const r = await fetch('/api/status');
     if (r.ok && (r.headers.get('content-type') || '').includes('json')) st = await r.json();
   }catch{}
   cap.server = st;
-  if (st?.pinSet && !st.authed) await askPin();
-  await setupBackends();
-}
-async function setupBackends(){
-  const st = cap.server;
-  if (st?.storage){
-    const sv = makeServerShim(); cap.db = sv.db; cap.assets = sv.assets; cap.uid = 'local'; cap.storeKind = 'server';
-  } else {
-    try{ const L = await openIDB(); cap.db = L.db; cap.assets = L.assets; cap.uid = 'local'; cap.storeKind = 'device'; }catch{}
-  }
   cap.sample = st?.ai ? makeLocalSample() : null;
-  showAiCard();
+  $('#codeCard').hidden = true;
+  $('#findCard').hidden = false;
+  if (st?.server) findChips('');
+  else $('#findNote').innerHTML = '서버 기능이 꺼져 있어요. 칩 PDF를 넣어서 보는 것만 돼요.<br>(Netlify에 GitHub 연결로 배포해야 등록/찾기가 켜져요)';
 }
-function showAiCard(){
-  const card = $('#aiCard'); if (!card) return;
-  card.hidden = !cap.local;
-  const st = cap.server;
-  $('#aiState').innerHTML =
-    `<b>AI</b> · ${cap.sample ? '연결됨 (답안 검증, 해설, 질문)' : '꺼짐 (칩 보기는 그대로 돼요)'}<br>` +
-    `<b>칩 저장</b> · ${cap.storeKind === 'server' ? '서버 · 어느 기기에서든 칩 코드로 열려요' : '이 기기 브라우저에만'}` +
-    (st?.pinSet && !st.pinValid ? '<br><b style="color:var(--warn)">APP_PASSWORD를 숫자 4자리로 바꿔 주세요</b>' : '');
-  $('#lockBtn').hidden = !st?.pinSet;
+const chipTokens = () => ls.get('hwv-chiptok', {});
+function rememberToken(id, token){ const t = chipTokens(); t[id] = token; ls.set('hwv-chiptok', t); }
+async function capi(route, { method = 'GET', params = {}, body, token, raw } = {}){
+  const headers = {};
+  if (token) headers['x-chip-token'] = token;
+  if (body !== undefined && !raw) headers['content-type'] = 'application/json';
+  if (raw) headers['content-type'] = 'application/octet-stream';
+  const q = new URLSearchParams(params).toString();
+  const r = await fetch('/api/' + route + (q ? '?' + q : ''), { method, headers, body: raw ? body : body !== undefined ? JSON.stringify(body) : undefined });
+  if (!r.ok){
+    let j = {}; try{ j = await r.json(); }catch{}
+    const e = new Error(j.error || ('서버 오류 ' + r.status)); e.status = r.status; e.needPin = j.needPin; throw e;
+  }
+  return r;
 }
 
-/* ---- PIN 잠금 화면 ---- */
-let pinWait = null;
-function askPin(msg){
-  const lock = $('#lock'); lock.hidden = false; $('#lockMsg').textContent = msg || '비밀번호 4자리';
-  pinBuf = ''; drawPin();
-  return new Promise(res => { pinWait = res; });
+/* ---- 찾기 ---- */
+let findT;
+$('#findIn').addEventListener('input', e => { clearTimeout(findT); findT = setTimeout(() => findChips(e.target.value), 300); });
+async function findChips(q){
+  if (!cap.server?.server) return;
+  const ul = $('#findList'), note = $('#findNote');
+  try{
+    const { chips } = await (await capi('chips', { params:{ q } })).json();
+    ul.innerHTML = ''; const toks = chipTokens();
+    note.textContent = chips.length ? '' : (q ? '그 제목의 칩이 없어요.' : '아직 등록된 칩이 없어요. 칩 PDF를 넣고 등록해 보세요.');
+    for (const c of chips){
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="t"><b></b><span>${c.count}문제 · ${new Date(c.updated || c.created).toLocaleDateString('ko-KR')}</span></div>
+        <span class="codechip">${toks[c.id] ? '열기' : '🔒 열기'}</span>`;
+      li.querySelector('b').textContent = c.title;
+      li.onclick = () => openNetChip(c);
+      ul.appendChild(li);
+    }
+  }catch(e){ note.textContent = '찾지 못했어요: ' + e.message; }
 }
-let pinBuf = '', pinBusy = false;
+async function openNetChip(c){
+  const tok = chipTokens()[c.id];
+  const tryOpen = async body => {
+    const j = await (await capi('chips/open', { method:'POST', body: { id: c.id, ...body } })).json();
+    rememberToken(c.id, j.token);
+    toast('칩 불러오는 중…', 8000);
+    const parts = [];
+    for (let i = 0; i < j.chunks; i++) parts.push(await (await capi('chips/pdf', { params:{ id: c.id, i }, token: j.token })).arrayBuffer());
+    const pdf = await new Blob(parts).arrayBuffer();
+    j.chip.title = j.meta.title;
+    await openChip(j.chip, pdf, { code: null, registered: false });
+    S.net = { id: c.id, token: j.token, title: j.meta.title };
+    for (const [k, v] of Object.entries(j.ai || {})){
+      if (k === '__overview') S.overview = v?.overview || S.overview;
+      else S.ai[k] = v;
+    }
+    netMeta(); buildTabs(); renderItem(); toast('열었어요', 1200);
+  };
+  if (tok){
+    try{ return await tryOpen({ token: tok }); }catch(e){ if (!e.needPin){ toast(e.message); return; } }
+  }
+  pinPrompt(`‘${c.title}’ 비밀번호 4자리`, async pin => {
+    try{ await tryOpen({ pin }); return null; }catch(e){ return e.message; }
+  });
+}
+function netMeta(){
+  if (!S.chip) return;
+  $('#vTitle').textContent = S.net?.title || S.chip.title || '과제';
+  $('#vMeta').innerHTML = `${S.chip.items.length}문제` + (S.net ? ' · <span class="codechip">등록됨</span>' : '');
+  $('#mRegBtn').hidden = !!S.net || !cap.server?.server;
+}
+
+/* ---- 비밀번호 키패드 (칩 열 때) ---- */
+let pinCb = null, pinBuf = '', pinBusy = false;
+function pinPrompt(msg, cb){
+  pinCb = cb; pinBuf = ''; drawPin();
+  $('#lockMsg').textContent = msg; $('#lock').hidden = false;
+}
 function drawPin(){ $('#lock').querySelectorAll('.dots i').forEach((d, i) => d.classList.toggle('on', i < pinBuf.length)); }
 async function pinKey(k){
   if (pinBusy) return;
@@ -643,75 +712,56 @@ async function pinKey(k){
   if (pinBuf.length >= 4) return;
   pinBuf += k; drawPin();
   if (pinBuf.length < 4) return;
-  pinBusy = true;
-  try{
-    const r = await fetch('/api/auth', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ pin: pinBuf }) });
-    const j = await r.json().catch(() => ({}));
-    if (r.ok && j.token){
-      ls.set('hwv-token', j.token); if (cap.server) cap.server.authed = true;
-      $('#lock').hidden = true; const w = pinWait; pinWait = null; w && w();
-    } else {
-      $('#lockMsg').textContent = j.error || '비밀번호가 틀려요';
-      $('#lock .lockbox').classList.remove('shake'); void $('#lock .lockbox').offsetWidth; $('#lock .lockbox').classList.add('shake');
-    }
-  }catch{ $('#lockMsg').textContent = '서버에 연결하지 못했어요'; }
+  pinBusy = true; $('#lockMsg').textContent = '확인 중…';
+  const err = await pinCb(pinBuf);
+  if (!err){ $('#lock').hidden = true; }
+  else {
+    $('#lockMsg').textContent = err;
+    const box = $('#lock .lockbox'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+  }
   pinBuf = ''; drawPin(); pinBusy = false;
 }
 document.querySelectorAll('#lock .pad button').forEach(b => b.onclick = () => pinKey(b.dataset.k));
+$('#lockClose').onclick = () => { $('#lock').hidden = true; pinCb = null; };
 document.addEventListener('keydown', e => {
   if ($('#lock').hidden) return;
-  if (/^\d$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del');
+  if (/^\d$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del'); else if (e.key === 'Escape') $('#lockClose').click();
 });
-function lockApp(msg){ if ($('#lock').hidden) askPin(msg || '다시 로그인해 주세요'); }
-$('#lockBtn').onclick = () => { ls.set('hwv-token', ''); if (cap.server) cap.server.authed = false; lockApp('잠갔어요 · 비밀번호 4자리'); };
 
-/* ---- 서버 저장소 (Netlify Function /api/doc, /api/list, /api/blob) ---- */
-function makeServerShim(){
-  const CH = 3 * 1024 * 1024;
-  async function api(route, params, init = {}){
-    const r = await fetch(`/api/${route}?` + new URLSearchParams(params),
-      { ...init, headers:{ 'x-app-token': ls.get('hwv-token', ''), ...(init.headers || {}) } });
-    if (r.status === 401) lockApp();
-    if (!r.ok){
-      let m = ''; try{ m = (await r.json()).error || ''; }catch{}
-      const e = new Error(m || ('HTTP ' + r.status)); e.code = r.status === 401 ? 'unauthorized' : 'unavailable'; throw e;
-    }
-    return r;
-  }
-  const snap = (id, data) => ({ id, exists: data != null, data: () => data ?? undefined, metadata:{ fromCache:false, hasPendingWrites:false } });
-  const docRef = path => ({ id: path.split('/').pop(), path,
-    get: async () => { const j = await (await api('doc', { path })).json(); return snap(path.split('/').pop(), j.exists ? j.data : null); },
-    set: async d => { await api('doc', { path }, { method:'PUT', headers:{ 'content-type':'application/json' }, body: JSON.stringify(d) }); },
-    delete: async () => { await api('doc', { path }, { method:'DELETE' }); },
-    collection: sub => col(path + '/' + sub) });
-  const col = (path, order = null, lim = 0) => ({ path,
-    doc: id => docRef(path + '/' + id),
-    orderBy: (f, dir = 'asc') => col(path, [f, dir], lim),
-    limit: n => col(path, order, n),
-    get: async () => {
-      const j = await (await api('list', { path })).json();
-      const all = j.docs.map(d => snap(d.id, d.data));
-      if (order) all.sort((a, b) => { const x = a.data()[order[0]], y = b.data()[order[0]]; return (x > y ? 1 : x < y ? -1 : 0) * (order[1] === 'desc' ? -1 : 1); });
-      const docs = lim ? all.slice(0, lim) : all;
-      return { docs, size: docs.length, empty: !docs.length };
-    } });
-  const assets = {
-    upload: async blob => {
-      const n = Math.max(1, Math.ceil(blob.size / CH));
-      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '_' + n;
-      for (let i = 0; i < n; i++)
-        await api('blob', { id, i }, { method:'PUT', headers:{ 'content-type':'application/octet-stream' }, body: blob.slice(i * CH, (i + 1) * CH) });
-      return { id, url:'', sizeBytes: blob.size, contentType: blob.type };
-    },
-    delete: async id => { await api('blob', { id, i: 0 }, { method:'DELETE' }); },
-    get: async id => {
-      const n = +String(id).split('_').pop() || 1, parts = [];
-      for (let i = 0; i < n; i++) parts.push(await (await api('blob', { id, i })).arrayBuffer());
-      return new Blob(parts);
-    }
-  };
-  return { db: { collection: p => col(p), doc: p => docRef(p) }, assets };
+/* ---- 등록 (제목 + 비밀번호 4자리) ---- */
+function showRegSheet(){
+  if (!cap.server?.server){ toast('서버 기능이 꺼져 있어서 등록할 수 없어요'); return; }
+  $('#rTitle').value = S.chip?.title || ''; $('#rPin').value = ''; $('#rPin2').value = '';
+  $('#rMsg').textContent = ''; $('#rOk').disabled = false; $('#regSheet').hidden = false;
+  setTimeout(() => $('#rTitle').focus(), 50);
 }
+['#rPin', '#rPin2'].forEach(sel => $(sel).addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); }));
+$('#rCancel').onclick = () => { $('#regSheet').hidden = true; };
+$('#rOk').onclick = async () => {
+  const title = $('#rTitle').value.trim(), pin = $('#rPin').value, pin2 = $('#rPin2').value, msg = $('#rMsg');
+  if (!title) return msg.textContent = '제목을 적어 주세요';
+  if (!/^\d{4}$/.test(pin)) return msg.textContent = '비밀번호는 숫자 4자리예요';
+  if (pin !== pin2) return msg.textContent = '비밀번호 확인이 달라요';
+  const btn = $('#rOk'); btn.disabled = true;
+  try{
+    const CH = 3 * 1024 * 1024, pdf = new Blob([S.pdfBytes]), chunks = Math.max(1, Math.ceil(pdf.size / CH));
+    const chip = { ...S.chip, title };
+    msg.textContent = '등록 중…';
+    const { id, token } = await (await capi('chips', { method:'POST', body: { title, pin, chip, chunks } })).json();
+    for (let i = 0; i < chunks; i++){
+      msg.textContent = `PDF 올리는 중 ${i + 1}/${chunks}`;
+      await capi('chips/pdf', { method:'PUT', params:{ id, i }, token, raw:true, body: pdf.slice(i * CH, (i + 1) * CH) });
+    }
+    rememberToken(id, token);
+    S.net = { id, token, title }; S.chip.title = title;
+    for (const [k, v] of Object.entries(S.ai)) saveAI(k, v);
+    if (S.overview) saveAI('__overview', { overview: S.overview });
+    $('#regSheet').hidden = true; netMeta();
+    toast(`등록 완료! 다른 기기에서 ‘${title}’로 찾아서 비밀번호를 넣으면 열려요`, 4500);
+    findChips('');
+  }catch(e){ msg.textContent = e.message; }
+  btn.disabled = false;
+};
 
 function blobToB64(blob){
   return new Promise((res, rej) => { const fr = new FileReader();
@@ -722,11 +772,11 @@ function makeLocalSample(){
     const messages = typeof input === 'string' ? [{ role:'user', content:input }] : input;
     const images = await Promise.all((opts.images || []).map(blobToB64));
     const r = await fetch('/api/claude', { method:'POST', signal: opts.signal,
-      headers:{ 'content-type':'application/json', 'x-app-token': ls.get('hwv-token', '') },
+      headers:{ 'content-type':'application/json', 'x-chip-id': S.net?.id || '', 'x-chip-token': S.net?.token || '' },
       body: JSON.stringify({ messages, images, tier: opts.modelTier || 'default' }) });
     if (!r.ok){
       let msg = ''; try{ msg = (await r.json()).error || ''; }catch{}
-      if (r.status === 401) lockApp();
+      if (r.status === 401 && !S.net) msg = '등록한 칩에서만 AI를 쓸 수 있어요. 메뉴(⋯)에서 등록해 주세요';
       const e = new Error(msg || ('HTTP ' + r.status));
       e.code = r.status === 429 || r.status === 529 ? 'rate_limited' : r.status === 401 ? 'unauthorized' : 'unavailable';
       throw e;
@@ -799,14 +849,11 @@ function makeShim(idb){
   return { db, assets };
 }
 
-function canStore(){ return !!(cap.db && cap.assets); }
+function canStore(){ return !cap.local && !!(cap.db && cap.assets); }
 function refreshCapsUI(){
   const store = canStore();
   $('#codeBtn').disabled = !store;
   if (cap.ready && !store) $('#codeNote').textContent = '여기서는 칩 저장을 쓸 수 없어요. 파일로 바로 보기는 돼요.';
-  else if (cap.ready && cap.local) $('#codeNote').textContent = cap.storeKind === 'server'
-    ? '등록한 칩은 서버에 저장돼요. 어느 기기에서든 코드만 입력하면 열려요.'
-    : '등록한 칩은 이 기기 브라우저에 저장돼요. 같은 기기에서 코드로 다시 열 수 있어요.';
   updatePendingUI();
 }
 
@@ -875,6 +922,7 @@ async function takeFiles(files){
 async function quickOpen(){
   const json = pending.json, pdf = pending.pdf;
   await openChip(json, pdf, { code: json.code || null, registered: false });
+  if (cap.local){ S.net = null; netMeta(); if (cap.server?.server) showRegSheet(); return; }
   if (!canStore()) return;
   try{
     const code = await registerChip(json, pdf);
@@ -894,7 +942,7 @@ function updatePendingUI(){
   sj.querySelector('span').textContent = pending.json ? (pending.merged ? '통합 칩 ✓' : pending.embedded ? '칩 PDF 안에 있음 ✓' : '준비됨 ✓') : '아직 없음';
   const ok = !!(pending.pdf && pending.json);
   $('#viewBtn').disabled = !ok;
-  $('#regBtn').disabled = !ok || !canStore();
+  $('#regBtn').disabled = !ok || !(canStore() || cap.server?.server);
   const info = $('#pendInfo');
   if (pending.json){
     info.hidden = false;
@@ -1066,6 +1114,7 @@ drop.addEventListener('drop', e => takeFiles([...e.dataTransfer.files]));
 
 $('#viewBtn').onclick = () => openChip(pending.json, pending.pdf, { code: pending.json.code || null, registered:false });
 $('#regBtn').onclick = async () => {
+  if (cap.local){ await openChip(pending.json, pending.pdf, { code:null, registered:false }); S.net = null; netMeta(); showRegSheet(); return; }
   const btn = $('#regBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>등록 중';
   try{
     const code = await registerChip(pending.json, pending.pdf);
@@ -1165,7 +1214,7 @@ async function openChip(json, pdfBuf, { code, registered }){
   }catch(e){ toast('PDF를 열지 못했어요'); return; }
   stopRun();
   S.cache.forEach(u => URL.revokeObjectURL(u)); S.cache.clear();
-  S.chip = json; S.code = code; S.registered = registered;
+  S.chip = json; S.code = code; S.registered = registered; S.net = null;
   S.ai = {}; S.overview = json.overview || ''; S.chats = {}; S.solOpen = {}; S.open = {}; S.filter = 'all';
   const pos = ls.get('hwv-pos-' + (code||json.title), OV);
   S.idx = Math.max(OV, Math.min(pos, json.items.length - 1));
@@ -1184,6 +1233,7 @@ async function openChip(json, pdfBuf, { code, registered }){
   $('#vMeta').innerHTML = `${json.items.length}문제` + (code ? ` · <span class="codechip">${esc(code)}</span>` : '');
   $('#mRegBtn').hidden = registered || !canStore();
   $('#mDlBtn').hidden = !cap.downloads;
+  if (cap.local) netMeta();
   buildTabs(); renderItem(); window.scrollTo(0,0);
 }
 /* 칩 원본 + AI 결과 합친 보기 */
@@ -1332,6 +1382,10 @@ function aiError(e){
   return 'AI가 답을 만들지 못했어요. 다시 시도해 주세요.';
 }
 function saveAI(id, obj){
+  if (cap.local){
+    if (S.net) capi('chips/ai', { method:'PUT', params:{ id: S.net.id }, token: S.net.token, body: { key: id, value: obj } }).catch(()=>{});
+    return;
+  }
   if (S.registered && cap.db)
     chipsCol().doc(S.code).collection('exp').doc(safeId(id)).set({ id, ...obj, at: Date.now() }).catch(()=>{});
 }
@@ -1472,7 +1526,7 @@ function renderOverview(main){
       </div>
       <div class="bar"><i class="ok" style="width:${c.ok/n*100}%"></i><i class="bad" style="width:${c.mismatch/n*100}%"></i><i class="mid" style="width:${c.unsure/n*100}%"></i></div>
       <div class="secact col">${act}
-        <p class="note" style="margin:0">AI가 문제마다 직접 풀어 보고 풀이집 답과 비교한 뒤 해설을 써요. ${!S.registered && canStore() ? '<b>칩을 등록해 두면 결과가 저장돼요.</b>' : ''}</p></div>
+        ${cap.sample ? `<p class="note" style="margin:0">AI가 문제마다 직접 풀어 보고 풀이집 답과 비교한 뒤 해설을 써요. ${!S.registered && canStore() ? '<b>칩을 등록해 두면 결과가 저장돼요.</b>' : ''}</p>` : (checked ? '' : '<p class="note" style="margin:0">이 칩에는 검증 결과가 없어요.</p>')}</div>
     </div>
     <div class="sec"><div class="sech">과제 요약<small>${S.ovBusy ? '<span class="spin"></span>만드는 중' : ''}</small></div>
       <div id="ov" class="md"></div><div id="ovAct" class="secact"></div></div>
@@ -1481,7 +1535,7 @@ function renderOverview(main){
       <div id="olist"></div></div>`;
   const ov = $('#ov'), ovAct = $('#ovAct');
   if (S.overview) setMD(ov, S.overview);
-  else ov.innerHTML = `<div class="empty" style="padding:6px 0">${checked ? '요약이 아직 없어요.' : '전체 검증을 실행하면 이번 과제의 핵심 개념, 공식, 검증 결과, 주의할 점을 정리해 드려요.'}</div>`;
+  else ov.innerHTML = `<div class="empty" style="padding:6px 0">${!cap.sample ? '이 칩에는 요약이 없어요.' : checked ? '요약이 아직 없어요.' : '전체 검증을 실행하면 이번 과제의 핵심 개념, 공식, 검증 결과, 주의할 점을 정리해 드려요.'}</div>`;
   if (cap.sample && checked && !S.ovBusy && !run){
     ovAct.innerHTML = `<button class="btn ghost">${S.overview ? '요약 다시 만들기' : '요약 만들기'}</button>`;
     ovAct.firstChild.onclick = () => makeOverview(false);
@@ -1599,6 +1653,7 @@ $('#menuBtn').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
 $('#autoSol').checked = ls.get('hwv-autosol', false);
 $('#autoSol').onchange = e => { ls.set('hwv-autosol', e.target.checked); renderItem(true); };
 $('#mRegBtn').onclick = async () => {
+  if (cap.local) return showRegSheet();
   const b = $('#mRegBtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>등록 중';
   try{
     const code = await registerChip(S.chip, S.pdfBytes);
