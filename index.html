@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>과제 솔빙 뷰어</title>
+<link rel="stylesheet" href="lib/katex/katex.min.css">
+<script defer src="lib/katex/katex.min.js"></script>
+<script defer src="lib/katex/auto-render.min.js"></script>
+<style>
+:root{
+  --bg:#f3f4f7; --card:#fff; --ink:#15192b; --sub:#5d6377; --line:#e2e5ec;
+  --accent:#1f3a8a; --accent-soft:#e7ecfb; --ok:#13795b; --ok-soft:#e3f4ec; --warn:#b4231b;
+  --radius:14px; --shadow:0 1px 2px rgba(20,25,45,.06),0 4px 14px rgba(20,25,45,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1220;--card:#181c2e;--ink:#e8eaf3;--sub:#9aa1b8;--line:#2a2f45;
+    --accent:#8fa8ff;--accent-soft:#232c4f;--ok:#4fd1a1;--ok-soft:#173a30;--warn:#ff7b72;
+    --shadow:none}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  -webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;padding:16px 14px 60px}
+
+/* ---------- home ---------- */
+.brand{padding:18px 4px 8px}
+.brand h1{margin:0;font-size:26px;letter-spacing:-.02em}
+.brand p{margin:4px 0 0;color:var(--sub);font-size:14.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px;margin-top:14px}
+.card h2{margin:0 0 10px;font-size:16px;letter-spacing:-.01em}
+.row{display:flex;gap:8px;align-items:center}
+.input{flex:1;min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);font-size:17px;letter-spacing:.06em;text-transform:uppercase}
+.input::placeholder{letter-spacing:0;text-transform:none;color:var(--sub)}
+.btn{padding:11px 16px;border-radius:10px;background:var(--accent);color:#fff;font-weight:600;white-space:nowrap}
+@media (prefers-color-scheme:dark){.btn{color:#0f1220}}
+.btn.ghost{background:var(--accent-soft);color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.note{color:var(--sub);font-size:13.5px;margin:8px 0 0}
+.drop{display:block;border:1.5px dashed var(--line);border-radius:12px;padding:18px;text-align:center;
+  color:var(--sub);font-size:14.5px}
+.drop b{color:var(--accent)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.slot{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;color:var(--sub)}
+.slot.on{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.slot strong{display:block;font-size:14.5px;color:var(--ink)}
+.pending-info{margin-top:10px;font-size:14.5px}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.mylist{list-style:none;margin:0;padding:0}
+.mylist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.mylist li:first-child{border-top:0}
+.mylist .t{flex:1;min-width:0}
+.mylist .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mylist .t span{font-size:13px;color:var(--sub)}
+.codechip{display:inline-block;font:600 12.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.04em;
+  background:var(--accent-soft);color:var(--accent);padding:5px 8px;border-radius:999px}
+.del{color:var(--sub);font-size:13.5px;padding:6px 8px}
+.del.armed{color:var(--warn);font-weight:600}
+.step{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0}
+.step>div{flex:1;min-width:0}
+.step p{margin:4px 0;font-size:14.5px;color:var(--sub)}
+.step .tip{background:var(--bg);border-radius:8px;padding:7px 10px;font-size:13.5px}
+.num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;
+  font-weight:700;font-size:14px;margin-top:1px}
+@media (prefers-color-scheme:dark){.num{color:#0f1220}}
+.field{display:block;width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:16px}
+.prompt{display:block;width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);
+  font:12.5px/1.5 ui-monospace,Menlo,monospace;color:var(--sub);resize:vertical}
+.paste{font-size:14px;color:var(--ink);margin-top:10px}
+/* verification / overview */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.bad{background:#fde8e6;color:var(--warn)}
+.badge.mid{background:#fdf1d8;color:#9a6200}
+.badge.none{background:var(--bg);color:var(--sub)}
+@media (prefers-color-scheme:dark){.badge.bad{background:#3d1d1b}.badge.mid{background:#3a2e14;color:#f0b44c}}
+.badge .spin{width:11px;height:11px;margin:0}
+.tab.warn::before{content:"";position:absolute;top:3px;left:3px;width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.ovtab{font-weight:700}
+.qhead .sub{color:var(--sub);font-size:14px;font-weight:600}
+.keyline{margin:6px 2px 0;color:var(--sub);font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:12px 14px 4px}
+.stat{text-align:center;border-radius:10px;padding:8px 2px;background:var(--bg)}
+.stat b{display:block;font-size:22px;line-height:1.2}
+.stat span{font-size:11.5px;color:var(--sub)}
+.stat.ok b{color:var(--ok)} .stat.bad b{color:var(--warn)} .stat.mid b{color:#c08000}
+.bar{display:flex;height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 14px 12px}
+.bar i{display:block;height:100%} .bar i.ok{background:var(--ok)} .bar i.bad{background:var(--warn)} .bar i.mid{background:#e0a020}
+.secact.col{flex-direction:column;align-items:stretch}
+.runline{font-size:14.5px;color:var(--ink)}
+.seg{display:inline-flex;background:var(--bg);border-radius:999px;padding:2px}
+.seg button{font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;color:var(--sub)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.orow{border-top:1px solid var(--line)}
+.orow:first-child{border-top:0}
+.ohead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;width:100%;text-align:left;padding:11px 14px}
+.oid{font-weight:700;font-size:15.5px;min-width:58px}
+.oid .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);vertical-align:2px}
+.okey{flex-basis:100%;color:var(--sub);font-size:14px;line-height:1.45}
+.orow.open .ohead{background:var(--bg)}
+.obody{display:none;padding:0 0 4px;background:var(--bg)}
+.orow.open .obody{display:block}
+.oexp{padding-top:0}
+.agrid{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:baseline;padding:12px 16px}
+.agrid .al{font-size:12.5px;font-weight:700;color:var(--sub);white-space:nowrap}
+.agrid .md{padding:0;font-size:15.5px}
+.agrid .md p{margin:0}
+.vsec.bad{border-color:var(--warn)} .vsec.mid{border-color:#e0a020}
+details{margin-top:14px;color:var(--sub);font-size:14px}
+details summary{cursor:pointer}
+details pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12.5px}
+
+/* ---------- viewer ---------- */
+.vbar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.vtop{display:flex;align-items:center;gap:6px;padding:8px 10px 6px;max-width:760px;margin:0 auto}
+.iconbtn{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;color:var(--ink)}
+.iconbtn:active{background:var(--line)}
+.vtitle{flex:1;min-width:0}
+.vtitle b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vtitle .meta{font-size:12.5px;color:var(--sub)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 10px 10px;max-width:760px;margin:0 auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);
+  font-size:14px;font-weight:600;color:var(--sub);position:relative}
+.tab.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.tab.cur{color:#0f1220}}
+.tab.done::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.menu{max-width:760px;margin:0 auto;padding:0 10px 10px;display:flex;gap:8px;flex-wrap:wrap}
+.menu .btn{flex:1;font-size:14px;padding:9px 10px}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--sub);padding:4px 2px}
+.qhead{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 0}
+.qhead h2{margin:0;font-size:24px;letter-spacing:-.02em}
+.donebtn{font-size:14px;font-weight:600;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--sub);background:var(--card)}
+.donebtn.on{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+  margin-top:12px;overflow:hidden}
+.sech{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-weight:700;font-size:14.5px;
+  border-bottom:1px solid var(--line)}
+.sech small{font-weight:500;color:var(--sub)}
+.pages img{display:block;width:100%;height:auto;background:#fff;cursor:zoom-in}
+.pages img+img{border-top:1px solid var(--line)}
+.ph{height:180px;display:grid;place-items:center;color:var(--sub);font-size:14px}
+.cover{position:relative}
+.cover .veil{position:absolute;inset:0;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--card) 55%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.veil .btn{box-shadow:var(--shadow)}
+.answer{padding:12px 14px;font-size:16px}
+.md{padding:4px 16px 14px;font-size:15.5px;overflow-x:auto}
+.md h3,.md h4{margin:16px 0 6px;font-size:15.5px;color:var(--accent)}
+.md p{margin:8px 0}
+.md ul,.md ol{padding-left:22px;margin:6px 0}
+.md li{margin:3px 0}
+.md code{font:13.5px ui-monospace,Menlo,monospace;background:var(--bg);padding:1px 5px;border-radius:5px}
+.md .katex-display{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.empty{padding:14px 16px;color:var(--sub);font-size:14.5px}
+.secact{display:flex;gap:8px;padding:0 14px 14px}
+.secact .btn{font-size:14px;padding:9px 12px}
+.chat{padding:6px 14px 4px}
+.msg{margin:8px 0;padding:9px 12px;border-radius:12px;font-size:15px}
+.msg.me{background:var(--accent-soft);margin-left:18%}
+.msg.ai{background:var(--bg)}
+.msg.ai .md{padding:0}
+.ask{display:flex;gap:8px;padding:8px 14px 14px}
+.ask input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:16px}
+.pn{display:flex;gap:10px;margin-top:16px}
+.pn .btn{flex:1}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* zoom */
+#zoom{position:fixed;inset:0;z-index:20;background:rgba(10,12,20,.94);display:flex;flex-direction:column}
+#zoom .zbar{display:flex;gap:8px;justify-content:flex-end;padding:10px}
+#zoom .zbar button{background:rgba(255,255,255,.14);color:#fff;border-radius:10px;padding:8px 14px;font-weight:600}
+#zoom .zbox{flex:1;overflow:auto;touch-action:pan-x pan-y pinch-zoom;-webkit-overflow-scrolling:touch}
+#zoom img{display:block;background:#fff;margin:0 auto}
+
+#lock{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;place-items:center;padding:20px}
+.lockbox{text-align:center;width:min(300px,100%)}
+.lockbox h2{margin:0 0 4px;font-size:22px}
+#lockMsg{color:var(--sub);margin:0 0 18px;font-size:15px;min-height:22px}
+.dots{display:flex;gap:16px;justify-content:center;margin-bottom:26px}
+.dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent)}
+.dots i.on{background:var(--accent)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pad button{height:64px;border-radius:50%;width:64px;margin:0 auto;background:var(--card);border:1px solid var(--line);font-size:24px;font-weight:600;box-shadow:var(--shadow)}
+.pad button:active{background:var(--accent-soft)}
+.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:#15192b;color:#fff;padding:10px 16px;border-radius:12px;font-size:14.5px;transition:.25s;z-index:30;
+  max-width:90vw;text-align:center;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section id="home" class="wrap">
+  <div class="brand">
+    <h1>과제 솔빙 뷰어</h1>
+    <p>칩을 넣으면 문제 · 풀이집 · 답안 검증 · 해설을 한 화면에</p>
+  </div>
+
+  <div class="card">
+    <h2>칩 코드로 열기</h2>
+    <div class="row">
+      <input id="codeIn" class="input" placeholder="예: CH12-K7Q2" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button id="codeBtn" class="btn">열기</button>
+    </div>
+    <p id="codeNote" class="note">등록해 둔 칩은 코드만 입력하면 어느 기기에서든 바로 열려요.</p>
+  </div>
+
+  <div id="aiCard" class="card" hidden>
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">연결 상태</h2><button id="lockBtn" class="del" hidden>잠그기</button></div>
+    <p id="aiState" class="note"></p>
+  </div>
+
+  <div class="card guide">
+    <h2>칩 만드는 법</h2>
+    <p class="note" style="margin-top:0"><b>교재 PDF</b>와 <b>답지 PDF</b>만 있으면 돼요. AI가 문제를 찾아 캡처하고, 답지와 맞는지 직접 풀어서 검증한 뒤, 해설까지 넣은 <b>칩 PDF</b> 하나로 만들어 줘요.</p>
+
+    <div class="step"><span class="num">1</span><div>
+      <b>과제 정보 적기</b>
+      <input id="gTitle" class="field" placeholder="과제 제목 (예: 12장 연습문제)">
+      <input id="gList" class="field" placeholder="문제 번호 (예: 12.1(a), 12.8, 12.16, 12.19 …)">
+    </div></div>
+
+    <div class="step"><span class="num">2</span><div>
+      <b>프롬프트 복사 → AI에게 PDF 두 개와 함께 보내기</b>
+      <p>Claude 새 채팅에 <b>교재 PDF</b>와 <b>답지 PDF</b>를 첨부하고 붙여 넣으세요. 몇 분 걸려요.</p>
+      <textarea id="gPrompt" class="prompt" readonly rows="6"></textarea>
+      <button id="copyBtn" class="btn" style="width:100%;margin-top:8px">프롬프트 복사</button>
+      <p class="tip">코드 실행·파일 만들기가 되는 AI여야 해요. 교재가 너무 커서 안 올라가면 그 장 페이지만 잘라서 올리세요.</p>
+    </div></div>
+
+    <div class="step"><span class="num">3</span><div>
+      <b>받은 칩 PDF를 아래 칩 넣기에 넣기</b>
+      <p>칩 PDF 하나만 넣으면 <b>바로 열려요.</b> 저장할 수 있는 환경이면 자동으로 등록돼서 칩 코드도 생겨요.</p>
+    </div></div>
+
+    <details class="alt">
+      <summary>캡처를 직접 모은 PDF가 있을 때</summary>
+      <p class="note">문제·답지 캡처를 PDF 하나로 모았다면, 이 프롬프트와 함께 AI에게 보내고 받은 JSON을 아래 붙여넣기 칸에 넣으세요. 또는 그 PDF만 넣고 <b>이 앱에서 AI로 칩 JSON 만들기</b>를 눌러도 돼요.</p>
+      <button id="copyBtnB" class="btn ghost" style="width:100%;margin-top:6px">캡처 PDF용 프롬프트 복사</button>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>칩 넣기</h2>
+    <label id="drop" class="drop">
+      <input id="fileIn" type="file" multiple accept=".pdf,.json,application/pdf,application/json" hidden>
+      <b>칩 PDF</b> 하나 넣으면 바로 열려요<br><span style="font-size:13px">(캡처 PDF + 칩 JSON, 통합 칩 파일도 돼요)</span>
+    </label>
+    <textarea id="jsonPaste" class="prompt paste" rows="3" placeholder="(캡처 PDF로 만들 때만) AI가 준 칩 JSON 붙여 넣기"></textarea>
+    <div class="slots">
+      <div id="slotPdf" class="slot"><strong>칩 PDF</strong><span>아직 없음</span></div>
+      <div id="slotJson" class="slot"><strong>칩 JSON</strong><span>아직 없음</span></div>
+    </div>
+    <div class="row" style="justify-content:space-between"><div id="pendInfo" class="pending-info" hidden></div><button id="clearBtn" class="del" hidden>비우기</button></div>
+    <button id="autoBtn" class="btn ghost" style="width:100%;margin-top:10px" hidden>이 앱에서 AI로 칩 JSON 만들기</button>
+    <p id="autoNote" class="note" hidden></p>
+    <div class="actions">
+      <button id="viewBtn" class="btn ghost" disabled>바로 보기</button>
+      <button id="regBtn" class="btn" disabled>등록하고 보기</button>
+    </div>
+    <p id="regNote" class="note" hidden></p>
+  </div>
+
+  <div id="myCard" class="card" hidden>
+    <h2>내 칩</h2>
+    <ul id="myList" class="mylist"></ul>
+  </div>
+
+  <details>
+    <summary>칩 JSON 형식 자세히</summary>
+    <pre>칩 PDF  : 문제·풀이 이미지가 한 페이지씩 들어 있는 PDF
+칩 JSON : 몇 페이지가 어느 문제/풀이인지 + 정답 + AI 설명
+{
+  "format": "hw-chip-v1",
+  "code": "CH12-K7Q2",
+  "title": "12장 연습문제",
+  "overview": "과제 전체 요약 (마크다운)",
+  "items": [
+    { "id": "12.1(a)", "problem_pages": [1], "solution_pages": [2],
+      "key": "한 줄 핵심", "answer": "풀이집 답",
+      "verify": { "status": "ok|mismatch|unsure", "my_answer": "...", "manual_answer": "...", "note": "..." },
+      "explain": "### 핵심 개념 ... ($수식$ 가능)" }
+  ]
+}
+통합 칩 : 위 JSON에 "pdf_base64"로 PDF까지 넣은 파일 하나</pre>
+  </details>
+</section>
+
+<!-- ================= VIEWER ================= -->
+<section id="viewer" hidden>
+  <div class="vbar">
+    <div class="vtop">
+      <button id="backBtn" class="iconbtn" aria-label="홈으로">‹</button>
+      <div class="vtitle"><b id="vTitle"></b><span id="vMeta" class="meta"></span></div>
+      <button id="menuBtn" class="iconbtn" aria-label="메뉴">⋯</button>
+    </div>
+    <div id="menu" class="menu" hidden>
+      <label class="switch"><input id="autoSol" type="checkbox"> 풀이 항상 보이기</label>
+      <button id="mRegBtn" class="btn ghost">이 칩 등록하기</button>
+      <button id="mDlBtn" class="btn ghost">통합 칩 받기</button>
+    </div>
+    <nav id="tabs" class="tabs"></nav>
+  </div>
+  <main id="vmain" class="wrap" style="padding-top:8px"></main>
+</section>
+
+<div id="zoom" hidden>
+  <div class="zbar"><button id="zOut">－</button><button id="zIn">＋</button><button id="zClose">닫기</button></div>
+  <div class="zbox"><img id="zImg" alt=""></div>
+</div>
+<div id="lock" hidden>
+  <div class="lockbox">
+    <h2>과제 솔빙 뷰어</h2>
+    <p id="lockMsg">비밀번호 4자리</p>
+    <div class="dots"><i></i><i></i><i></i><i></i></div>
+    <div class="pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <span></span><button data-k="0">0</button><button data-k="del" aria-label="지우기">⌫</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script type="text/plain" id="chipkitSrc">
+#!/usr/bin/env python3
+"""
+chipkit — 교재 PDF + 답지 PDF에서 문제/풀이를 잘라 '과제 솔빙 뷰어' 칩 PDF를 만든다.
+필요: pdfplumber, pypdfium2, pypdf, Pillow
+
+  import chipkit as ck
+  ck.find("book.pdf", "12.8")                    # 문제 번호 위치 후보 [(page, top, x0, 줄 텍스트)]
+  segs = ck.auto_box("book.pdf", "12.8")         # 자동 자르기 영역 [(page, top, bottom, left, right)]
+  ck.save_crop("book.pdf", segs, "p_12.8.png")   # 잘라서 저장 → 반드시 이미지를 직접 열어 확인
+  ck.render("book.pdf", 412, "chk.png")          # 페이지 전체 + 좌표 눈금 (수동 보정용)
+  ck.sheet("book.pdf", range(400, 412), "s.png") # 썸네일 모음 (스캔본에서 문제 위치 찾기용)
+  ck.build(items, "12장_칩", title="12장 연습문제", overview="...")
+좌표 단위: PDF pt, 페이지 왼쪽 위가 (0,0). 페이지 번호는 1부터.
+"""
+import io, json, os, re
+import pdfplumber
+import pypdfium2 as pdfium
+from PIL import Image, ImageDraw, ImageFont
+from pypdf import PdfReader, PdfWriter
+
+_plumb, _pdfium, _index = {}, {}, {}
+PREFIX = r'(?:[*•▶►■□●○#]|P|Prob\.?|Problem|PROBLEM|Exercise|Ex\.?|Solution|SOLUTION|Sol\.?|문제|연습문제|풀이)?'
+
+
+def _pl(path):
+    if path not in _plumb: _plumb[path] = pdfplumber.open(path)
+    return _plumb[path]
+
+
+def _pm(path):
+    if path not in _pdfium: _pdfium[path] = pdfium.PdfDocument(path)
+    return _pdfium[path]
+
+
+def base_label(label):
+    """'12.1(a)' → '12.1'"""
+    return re.match(r'\s*([0-9]+[.\-][0-9]+)', str(label)).group(1)
+
+
+def page_lines(path, pno):
+    """한 페이지의 줄 목록 (2단 편집이면 단별로 나눠 읽기 순서대로)."""
+    key = (path, pno)
+    if key in _index: return _index[key]
+    page = _pl(path).pages[pno - 1]
+    W, H = float(page.width), float(page.height)
+    words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
+    left = [w for w in words if w['x1'] < W / 2]
+    right = [w for w in words if w['x0'] > W / 2]
+    cross = [w for w in words if w['x0'] <= W / 2 <= w['x1']]
+    two_col = len(left) >= 8 and len(right) >= 8 and len(cross) <= max(2, 0.02 * len(words))
+    cols = [(left, 0, W / 2), (right, W / 2, W)] if two_col else [(words, 0, W)]
+    out = []
+    for ci, (ws, cx0, cx1) in enumerate(cols):
+        rows = []
+        for w in sorted(ws, key=lambda w: (round(w['top']), w['x0'])):
+            if rows and abs(rows[-1]['top'] - w['top']) < 3: rows[-1]['w'].append(w)
+            else: rows.append({'top': w['top'], 'w': [w]})
+        for r in rows:
+            r['w'].sort(key=lambda w: w['x0'])
+            out.append({'page': pno, 'col': ci, 'ncol': len(cols), 'top': r['top'],
+                        'bottom': max(w['bottom'] for w in r['w']), 'x0': r['w'][0]['x0'],
+                        'text': ' '.join(w['text'] for w in r['w']),
+                        'cx0': cx0, 'cx1': cx1, 'W': W, 'H': H})
+    _index[key] = out
+    return out
+
+
+def has_text(path, sample=5):
+    n = len(_pl(path).pages)
+    pages = sorted(set([1, n // 3 or 1, n // 2 or 1, (2 * n) // 3 or 1, n]))[:sample]
+    return any(len(page_lines(path, p)) > 5 for p in pages)
+
+
+def find(path, label, pages=None):
+    """줄 맨 앞에 문제 번호가 있는 위치 후보. pages: 검색할 페이지 범위(1부터)."""
+    b = re.escape(base_label(label))
+    pat = re.compile(r'^' + PREFIX + r'\s*' + b + r'(?![\d])(?:\s|[.):]|$)')
+    pages = pages or range(1, len(_pl(path).pages) + 1)
+    hits = []
+    for p in pages:
+        for ln in page_lines(path, p):
+            if pat.match(ln['text']):
+                hits.append((p, round(ln['top'], 1), round(ln['x0'], 1), ln['text'][:80]))
+    return hits
+
+
+def _body(ln):  # 머리말/꼬리말 제외
+    return 0.06 * ln['H'] < ln['top'] < 0.94 * ln['H']
+
+
+def auto_box(path, label, pick=0, pages=None, pad=4, max_pages=3):
+    """문제 번호 줄부터 다음 문제 번호 줄 직전까지의 영역. 여러 단/페이지에 걸치면 조각 여러 개.
+    pick: find() 후보 중 몇 번째를 쓸지. 결과는 반드시 save_crop 후 눈으로 확인할 것."""
+    hits = find(path, label, pages)
+    if not hits: raise ValueError(f'{label}: 텍스트에서 못 찾음 (스캔본이면 sheet/render로 직접 찾기)')
+    p0, top0, x00, _ = hits[pick]
+    chap = re.escape(re.split(r'[.\-]', base_label(label))[0])
+    next_pat = re.compile(r'^' + PREFIX + r'\s*' + chap + r'[.\-]\d{1,3}(?![\d])(?:\s|[.):]|$)')
+    n = len(_pl(path).pages)
+    start = next(l for l in page_lines(path, p0) if abs(l['top'] - top0) < 0.2 and abs(l['x0'] - x00) < 0.2)
+    segs, cur, begun = [], None, False
+    for p in range(p0, min(n, p0 + max_pages) + 1):
+        lines = [l for l in page_lines(path, p) if _body(l)]
+        for ci in sorted(set(l['col'] for l in lines)):
+            col = [l for l in lines if l['col'] == ci]
+            for l in col:
+                if not begun:
+                    if l is start:
+                        begun = True; cur = [p, l['top'] - pad, l['bottom'], l['cx0'], l['cx1']]
+                    continue
+                if next_pat.match(l['text']) and l['x0'] - l['cx0'] < 0.25 * (l['cx1'] - l['cx0']):
+                    if cur: cur[2] = max(cur[2], l['top'] - 3); segs.append(cur)   # 그림까지 포함: 다음 문제 직전까지
+                    return [_fix(s, path) for s in segs]
+                if cur is None: cur = [p, l['top'] - pad, l['bottom'], l['cx0'], l['cx1']]
+                cur[2] = max(cur[2], l['bottom'])
+            if begun and cur is not None:
+                # 단/페이지 끝 → 그림이 아래에 있을 수 있으니 단 끝까지
+                cur[2] = max(cur[2], 0.94 * col[0]['H'])
+                segs.append(cur); cur = None
+    return [_fix(s, path) for s in segs]
+
+
+def _fix(s, path):
+    p, top, bottom, x0, x1 = s
+    H = float(_pl(path).pages[p - 1].height)
+    return (p, max(0, round(top, 1)), min(H, round(bottom + 2, 1)), round(x0, 1), round(x1, 1))
+
+
+def crop(path, seg, dpi=220):
+    p, top, bottom, left, right = seg
+    page = _pm(path)[p - 1]
+    img = page.render(scale=dpi / 72).to_pil().convert('RGB')
+    k = dpi / 72
+    return img.crop((int(left * k), int(top * k), int(right * k), int(bottom * k)))
+
+
+def trim(img, margin=12):
+    """흰 여백 자동 정리."""
+    g = img.convert('L').point(lambda v: 0 if v > 245 else 255)
+    bb = g.getbbox()
+    if not bb: return img
+    x0, y0, x1, y1 = bb
+    return img.crop((max(0, x0 - margin), max(0, y0 - margin), min(img.width, x1 + margin), min(img.height, y1 + margin)))
+
+
+def save_crop(path, segs, out_png, dpi=220):
+    """조각들을 세로로 이어 붙여 PNG 하나로 저장."""
+    parts = [trim(crop(path, s, dpi)) for s in segs]
+    W = max(p.width for p in parts); H = sum(p.height for p in parts) + 10 * (len(parts) - 1)
+    canvas = Image.new('RGB', (W, H), 'white'); y = 0
+    for p in parts: canvas.paste(p, (0, y)); y += p.height + 10
+    canvas.save(out_png); return out_png
+
+
+def _font(sz):
+    for f in ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc']:
+        if os.path.exists(f): return ImageFont.truetype(f, sz)
+    return ImageFont.load_default()
+
+
+def render(path, pno, out_png, dpi=100, grid=50):
+    """페이지 전체 + pt 좌표 눈금 (grid pt 간격). 수동으로 top/bottom/left/right 정할 때 사용."""
+    page = _pm(path)[pno - 1]
+    img = page.render(scale=dpi / 72).to_pil().convert('RGB')
+    d, k, f = ImageDraw.Draw(img), dpi / 72, _font(11)
+    for y in range(0, int(img.height / k), grid):
+        d.line([(0, y * k), (img.width, y * k)], fill=(255, 80, 80), width=1); d.text((2, y * k + 1), str(y), fill=(220, 0, 0), font=f)
+    for x in range(0, int(img.width / k), grid * 2):
+        d.line([(x * k, 0), (x * k, img.height)], fill=(80, 140, 255), width=1); d.text((x * k + 2, 2), str(x), fill=(0, 80, 220), font=f)
+    img.save(out_png); return out_png
+
+
+def sheet(path, pages, out_png, width=300, cols=4):
+    """페이지 썸네일 모음 (페이지 번호 표시)."""
+    thumbs = []
+    for p in pages:
+        pg = _pm(path)[p - 1]
+        im = pg.render(scale=width / pg.get_width()).to_pil().convert('RGB')
+        ImageDraw.Draw(im).text((6, 6), f'p.{p}', fill=(220, 0, 0), font=_font(22)); thumbs.append(im)
+    rows = (len(thumbs) + cols - 1) // cols; h = max(t.height for t in thumbs)
+    out = Image.new('RGB', (cols * (width + 8), rows * (h + 8)), (200, 200, 200))
+    for i, t in enumerate(thumbs): out.paste(t, ((i % cols) * (width + 8), (i // cols) * (h + 8)))
+    out.save(out_png); return out_png
+
+
+def build(items, out_base, title, overview='', code=None):
+    """items: [{"id","problem":[png...],"solution":[png...],"answer","key","verify","explain"}]
+    → out_base.pdf (칩 JSON 내장) + out_base.json"""
+    pages, chip_items = [], []
+    for it in items:
+        pp, sp = [], []
+        for f in it.get('problem', []): pages.append(Image.open(f).convert('RGB')); pp.append(len(pages))
+        for f in it.get('solution', []): pages.append(Image.open(f).convert('RGB')); sp.append(len(pages))
+        chip_items.append({'id': it['id'], 'problem_pages': pp, 'solution_pages': sp,
+                           **{k: it[k] for k in ('answer', 'key', 'verify', 'explain') if it.get(k)}})
+    if not code:
+        import random
+        code = 'CH' + (re.findall(r'\d+', title) or ['X'])[0][:3] + '-' + ''.join(random.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(4))
+    chip = {'format': 'hw-chip-v1', 'code': code, 'title': title, 'overview': overview, 'items': chip_items}
+    buf = io.BytesIO()
+    pages[0].save(buf, 'PDF', save_all=True, append_images=pages[1:], resolution=200)
+    r = PdfReader(io.BytesIO(buf.getvalue())); w = PdfWriter()
+    for pg in r.pages: w.add_page(pg)
+    data = json.dumps(chip, ensure_ascii=False).encode('utf-8')
+    w.add_attachment('chip.json', data)
+    w.add_metadata({'/Title': title, '/Subject': 'hw-chip-v1', '/Keywords': code})
+    with open(out_base + '.pdf', 'wb') as f: w.write(f)
+    with open(out_base + '.json', 'w', encoding='utf-8') as f: json.dump(chip, f, ensure_ascii=False, indent=1)
+    print(f'칩 완성: {out_base}.pdf ({len(pages)}쪽, 칩 JSON 내장) / 코드 {code}')
+    return chip
+</script>
+<script type="module">
+import * as pdfjsLib from './lib/pdf.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./lib/pdf.worker.min.js', import.meta.url).href;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+function toast(msg, ms = 2600){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ---------- state ---------- */
+const S = { chip:null, pdf:null, pdfBytes:null, code:null, registered:false, idx:0,
+            cache:new Map(), exps:{}, chats:{}, solOpen:{} };
+const pending = { json:null, pdf:null, merged:false, embedded:false };
+
+/* ---------- capabilities ---------- */
+const cap = { db:null, uid:null, assets:null, sample:null, downloads:null, ready:false, local:false, aiNeedPass:false };
+(async () => {
+  if (window.claude?.use) {
+    const get = n => window.claude.use(n).catch(() => null);
+    const [user, db, assets, sample, downloads] = await Promise.all(['user','db','assets','sample','downloads'].map(get));
+    cap.uid = user ? await user.id() : null;
+    cap.db = db && cap.uid ? db : null;
+    cap.assets = assets; cap.sample = sample; cap.downloads = downloads;
+  } else {
+    await initLocal();   // Netlify 등 일반 웹 호스팅
+  }
+  cap.ready = true;
+  refreshCapsUI();
+  if (cap.db) loadMyChips();
+  if (S.chip) renderItem();
+})();
+
+/* ===== 일반 웹 호스팅용 (Netlify): PIN 잠금 + 서버 저장(Netlify Blobs) + /api/claude ===== */
+async function initLocal(){
+  cap.local = true;
+  cap.downloads = { save: async ({ filename, data }) => {
+    const blob = data instanceof Blob ? data : new Blob([data]);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    return { status:'saved' };
+  } };
+  let st = null;
+  try{
+    const r = await fetch('/api/status', { headers:{ 'x-app-token': ls.get('hwv-token', '') } });
+    if (r.ok && (r.headers.get('content-type') || '').includes('json')) st = await r.json();
+  }catch{}
+  cap.server = st;
+  if (st?.pinSet && !st.authed) await askPin();
+  await setupBackends();
+}
+async function setupBackends(){
+  const st = cap.server;
+  if (st?.storage){
+    const sv = makeServerShim(); cap.db = sv.db; cap.assets = sv.assets; cap.uid = 'local'; cap.storeKind = 'server';
+  } else {
+    try{ const L = await openIDB(); cap.db = L.db; cap.assets = L.assets; cap.uid = 'local'; cap.storeKind = 'device'; }catch{}
+  }
+  cap.sample = st?.ai ? makeLocalSample() : null;
+  showAiCard();
+}
+function showAiCard(){
+  const card = $('#aiCard'); if (!card) return;
+  card.hidden = !cap.local;
+  const st = cap.server;
+  $('#aiState').innerHTML =
+    `<b>AI</b> · ${cap.sample ? '연결됨 (답안 검증, 해설, 질문)' : '꺼짐 (칩 보기는 그대로 돼요)'}<br>` +
+    `<b>칩 저장</b> · ${cap.storeKind === 'server' ? '서버 · 어느 기기에서든 칩 코드로 열려요' : '이 기기 브라우저에만'}` +
+    (st?.pinSet && !st.pinValid ? '<br><b style="color:var(--warn)">APP_PASSWORD를 숫자 4자리로 바꿔 주세요</b>' : '');
+  $('#lockBtn').hidden = !st?.pinSet;
+}
+
+/* ---- PIN 잠금 화면 ---- */
+let pinWait = null;
+function askPin(msg){
+  const lock = $('#lock'); lock.hidden = false; $('#lockMsg').textContent = msg || '비밀번호 4자리';
+  pinBuf = ''; drawPin();
+  return new Promise(res => { pinWait = res; });
+}
+let pinBuf = '', pinBusy = false;
+function drawPin(){ $('#lock').querySelectorAll('.dots i').forEach((d, i) => d.classList.toggle('on', i < pinBuf.length)); }
+async function pinKey(k){
+  if (pinBusy) return;
+  if (k === 'del'){ pinBuf = pinBuf.slice(0, -1); drawPin(); return; }
+  if (pinBuf.length >= 4) return;
+  pinBuf += k; drawPin();
+  if (pinBuf.length < 4) return;
+  pinBusy = true;
+  try{
+    const r = await fetch('/api/auth', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ pin: pinBuf }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.token){
+      ls.set('hwv-token', j.token); if (cap.server) cap.server.authed = true;
+      $('#lock').hidden = true; const w = pinWait; pinWait = null; w && w();
+    } else {
+      $('#lockMsg').textContent = j.error || '비밀번호가 틀려요';
+      $('#lock .lockbox').classList.remove('shake'); void $('#lock .lockbox').offsetWidth; $('#lock .lockbox').classList.add('shake');
+    }
+  }catch{ $('#lockMsg').textContent = '서버에 연결하지 못했어요'; }
+  pinBuf = ''; drawPin(); pinBusy = false;
+}
+document.querySelectorAll('#lock .pad button').forEach(b => b.onclick = () => pinKey(b.dataset.k));
+document.addEventListener('keydown', e => {
+  if ($('#lock').hidden) return;
+  if (/^\d$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del');
+});
+function lockApp(msg){ if ($('#lock').hidden) askPin(msg || '다시 로그인해 주세요'); }
+$('#lockBtn').onclick = () => { ls.set('hwv-token', ''); if (cap.server) cap.server.authed = false; lockApp('잠갔어요 · 비밀번호 4자리'); };
+
+/* ---- 서버 저장소 (Netlify Function /api/doc, /api/list, /api/blob) ---- */
+function makeServerShim(){
+  const CH = 3 * 1024 * 1024;
+  async function api(route, params, init = {}){
+    const r = await fetch(`/api/${route}?` + new URLSearchParams(params),
+      { ...init, headers:{ 'x-app-token': ls.get('hwv-token', ''), ...(init.headers || {}) } });
+    if (r.status === 401) lockApp();
+    if (!r.ok){
+      let m = ''; try{ m = (await r.json()).error || ''; }catch{}
+      const e = new Error(m || ('HTTP ' + r.status)); e.code = r.status === 401 ? 'unauthorized' : 'unavailable'; throw e;
+    }
+    return r;
+  }
+  const snap = (id, data) => ({ id, exists: data != null, data: () => data ?? undefined, metadata:{ fromCache:false, hasPendingWrites:false } });
+  const docRef = path => ({ id: path.split('/').pop(), path,
+    get: async () => { const j = await (await api('doc', { path })).json(); return snap(path.split('/').pop(), j.exists ? j.data : null); },
+    set: async d => { await api('doc', { path }, { method:'PUT', headers:{ 'content-type':'application/json' }, body: JSON.stringify(d) }); },
+    delete: async () => { await api('doc', { path }, { method:'DELETE' }); },
+    collection: sub => col(path + '/' + sub) });
+  const col = (path, order = null, lim = 0) => ({ path,
+    doc: id => docRef(path + '/' + id),
+    orderBy: (f, dir = 'asc') => col(path, [f, dir], lim),
+    limit: n => col(path, order, n),
+    get: async () => {
+      const j = await (await api('list', { path })).json();
+      const all = j.docs.map(d => snap(d.id, d.data));
+      if (order) all.sort((a, b) => { const x = a.data()[order[0]], y = b.data()[order[0]]; return (x > y ? 1 : x < y ? -1 : 0) * (order[1] === 'desc' ? -1 : 1); });
+      const docs = lim ? all.slice(0, lim) : all;
+      return { docs, size: docs.length, empty: !docs.length };
+    } });
+  const assets = {
+    upload: async blob => {
+      const n = Math.max(1, Math.ceil(blob.size / CH));
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '_' + n;
+      for (let i = 0; i < n; i++)
+        await api('blob', { id, i }, { method:'PUT', headers:{ 'content-type':'application/octet-stream' }, body: blob.slice(i * CH, (i + 1) * CH) });
+      return { id, url:'', sizeBytes: blob.size, contentType: blob.type };
+    },
+    delete: async id => { await api('blob', { id, i: 0 }, { method:'DELETE' }); },
+    get: async id => {
+      const n = +String(id).split('_').pop() || 1, parts = [];
+      for (let i = 0; i < n; i++) parts.push(await (await api('blob', { id, i })).arrayBuffer());
+      return new Blob(parts);
+    }
+  };
+  return { db: { collection: p => col(p), doc: p => docRef(p) }, assets };
+}
+
+function blobToB64(blob){
+  return new Promise((res, rej) => { const fr = new FileReader();
+    fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
+}
+function makeLocalSample(){
+  const fn = async (input, opts = {}) => {
+    const messages = typeof input === 'string' ? [{ role:'user', content:input }] : input;
+    const images = await Promise.all((opts.images || []).map(blobToB64));
+    const r = await fetch('/api/claude', { method:'POST', signal: opts.signal,
+      headers:{ 'content-type':'application/json', 'x-app-token': ls.get('hwv-token', '') },
+      body: JSON.stringify({ messages, images, tier: opts.modelTier || 'default' }) });
+    if (!r.ok){
+      let msg = ''; try{ msg = (await r.json()).error || ''; }catch{}
+      if (r.status === 401) lockApp();
+      const e = new Error(msg || ('HTTP ' + r.status));
+      e.code = r.status === 429 || r.status === 529 ? 'rate_limited' : r.status === 401 ? 'unauthorized' : 'unavailable';
+      throw e;
+    }
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = '', text = '';
+    for (;;){
+      const { done, value } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream:true });
+      let i;
+      while ((i = buf.indexOf('\n\n')) >= 0){
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const line = chunk.split('\n').find(l => l.startsWith('data:')); if (!line) continue;
+        let ev; try{ ev = JSON.parse(line.slice(5)); }catch{ continue; }
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta'){
+          text += ev.delta.text; opts.onText?.({ text, delta: ev.delta.text });
+        } else if (ev.type === 'error'){
+          const e = new Error(ev.error?.message || 'AI 오류');
+          e.code = /overloaded|rate_limit/.test(ev.error?.type || '') ? 'rate_limited' : 'unavailable'; throw e;
+        }
+      }
+    }
+    return { text, truncated:false };
+  };
+  fn.limits = async () => ({ images:true });
+  return fn;
+}
+/* IndexedDB로 db/assets 흉내 (이 기기 브라우저에만 저장) */
+function openIDB(){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('hwviewer', 1);
+    rq.onupgradeneeded = () => { rq.result.createObjectStore('docs'); rq.result.createObjectStore('blobs'); };
+    rq.onsuccess = () => res(makeShim(rq.result)); rq.onerror = () => rej(rq.error);
+  });
+}
+function makeShim(idb){
+  const tx = (store, mode, fn) => new Promise((res, rej) => {
+    const t = idb.transaction(store, mode), r = fn(t.objectStore(store)); let out;
+    if (r) r.onsuccess = () => { out = r.result; };
+    t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+  const snap = (id, data) => ({ id, exists: data !== undefined, data: () => data, metadata:{ fromCache:false, hasPendingWrites:false } });
+  const docRef = path => ({ id: path.split('/').pop(), path,
+    get: async () => snap(path.split('/').pop(), await tx('docs', 'readonly', s => s.get(path))),
+    set: d => tx('docs', 'readwrite', s => s.put(JSON.parse(JSON.stringify(d)), path)).then(() => {}),
+    delete: () => tx('docs', 'readwrite', s => s.delete(path)).then(() => {}),
+    collection: sub => col(path + '/' + sub) });
+  const col = (path, order = null, lim = 0) => ({ path,
+    doc: id => docRef(path + '/' + id),
+    orderBy: (f, dir = 'asc') => col(path, [f, dir], lim),
+    limit: n => col(path, order, n),
+    get: async () => {
+      const all = await new Promise((res, rej) => {
+        const out = [], rq = idb.transaction('docs').objectStore('docs').openCursor(IDBKeyRange.bound(path + '/', path + '/￿'));
+        rq.onsuccess = () => { const c = rq.result; if (!c) return res(out);
+          const rest = String(c.key).slice(path.length + 1); if (!rest.includes('/')) out.push(snap(rest, c.value)); c.continue(); };
+        rq.onerror = () => rej(rq.error);
+      });
+      if (order) all.sort((a, b) => { const x = a.data()[order[0]], y = b.data()[order[0]]; return (x > y ? 1 : x < y ? -1 : 0) * (order[1] === 'desc' ? -1 : 1); });
+      const docs = lim ? all.slice(0, lim) : all;
+      return { docs, size: docs.length, empty: !docs.length };
+    } });
+  const db = { collection: p => col(p), doc: p => docRef(p) };
+  const assets = {
+    upload: async blob => { const id = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      await tx('blobs', 'readwrite', s => s.put(blob, id)); return { id, url:'', sizeBytes: blob.size, contentType: blob.type }; },
+    delete: id => tx('blobs', 'readwrite', s => s.delete(id)).then(() => {}),
+    get: id => tx('blobs', 'readonly', s => s.get(id))
+  };
+  return { db, assets };
+}
+
+function canStore(){ return !!(cap.db && cap.assets); }
+function refreshCapsUI(){
+  const store = canStore();
+  $('#codeBtn').disabled = !store;
+  if (cap.ready && !store) $('#codeNote').textContent = '여기서는 칩 저장을 쓸 수 없어요. 파일로 바로 보기는 돼요.';
+  else if (cap.ready && cap.local) $('#codeNote').textContent = cap.storeKind === 'server'
+    ? '등록한 칩은 서버에 저장돼요. 어느 기기에서든 코드만 입력하면 열려요.'
+    : '등록한 칩은 이 기기 브라우저에 저장돼요. 같은 기기에서 코드로 다시 열 수 있어요.';
+  updatePendingUI();
+}
+
+
+/* ---------- file intake ---------- */
+function b64ToBuf(b64){ const s = atob(b64); const u = new Uint8Array(s.length); for (let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u.buffer; }
+function bufToB64(buf){ const u = new Uint8Array(buf); let s=''; for (let i=0;i<u.length;i+=0x8000) s += String.fromCharCode.apply(null, u.subarray(i,i+0x8000)); return btoa(s); }
+function validChip(o){
+  return o && Array.isArray(o.items) && o.items.length && o.items.every(it => it && it.id != null && Array.isArray(it.problem_pages));
+}
+/* AI가 준 텍스트에서 JSON 꺼내기: 코드블록/앞뒤 설명 제거, LaTeX 역슬래시 실수 보정 */
+const LATEX_N = /^(nabla|neq|ne|nu|not|ni|nleq|ngeq|newline|nonumber|notin)\b/;
+function fixLatexEscapes(raw){
+  // 문자열 안의 '\단어' 중 JSON 이스케이프로 잘못 읽힐 LaTeX 명령을 '\\단어'로
+  raw = raw.replace(/(\\+)([^A-Za-z"\\/])/g, (m, sl, ch) => sl.length % 2 ? sl + '\\' + ch : m); // \, \{ \; 등
+  return raw.replace(/(\\+)([A-Za-z]+)/g, (m, sl, word) => {
+    if (sl.length % 2 === 0) return m;                         // 이미 \\ 로 잘 씀
+    if (/^u[0-9a-fA-F]{4}/.test(word)) return m;               // \uXXXX
+    if (word.length === 1 && 'bfnrt'.includes(word)) return m; // \n 같은 진짜 이스케이프
+    if (word[0] === 'n' && !LATEX_N.test(word)) return m;      // \n + 영어 단어
+    return sl + '\\' + word;
+  });
+}
+function parseChipText(text){
+  const o = parseLoose(text);
+  if (!validChip(o)) throw new Error('items(문제 목록)가 없어요');
+  o.format ||= 'hw-chip-v1';
+  return o;
+}
+async function readEmbedded(buf){
+  try{
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+    const att = await doc.getAttachments();
+    const entries = !att ? [] : att instanceof Map ? [...att.entries()] : Object.entries(att);
+    for (const [key, a] of entries){
+      if (!/\.json$/i.test(a?.filename || a?.rawFilename || key)) continue;
+      const content = a.content || (doc.getAttachmentContent ? await doc.getAttachmentContent(key) : null);
+      if (content) return parseChipText(new TextDecoder().decode(content));
+    }
+  }catch{}
+  return null;
+}
+async function takeFiles(files){
+  let embedded = null;
+  for (const f of files){
+    const name = f.name.toLowerCase();
+    try{
+      if (name.endsWith('.pdf') || f.type === 'application/pdf'){
+        pending.pdf = await f.arrayBuffer(); pending.merged = false;
+        embedded = await readEmbedded(pending.pdf);
+        if (embedded){ pending.json = embedded; pending.embedded = true; }
+        else if (pending.embedded){ pending.json = null; pending.embedded = false; }
+      } else {
+        const o = parseChipText(await f.text());
+        if (o.pdf_base64){
+          pending.pdf = b64ToBuf(o.pdf_base64); delete o.pdf_base64; pending.merged = true;
+        } else pending.merged = false;
+        pending.json = o; pending.embedded = false;
+      }
+    }catch(e){ toast('파일을 읽지 못했어요: ' + f.name); }
+  }
+  updatePendingUI();
+  if (pending.pdf && pending.json && (pending.embedded || pending.merged)) quickOpen();
+}
+/* 칩 PDF 하나(또는 통합 칩) → 바로 열고, 저장 가능하면 자동 등록 */
+async function quickOpen(){
+  const json = pending.json, pdf = pending.pdf;
+  await openChip(json, pdf, { code: json.code || null, registered: false });
+  if (!canStore()) return;
+  try{
+    const code = await registerChip(json, pdf);
+    if (S.chip !== json) return;
+    S.code = code; S.registered = true;
+    for (const [id, r] of Object.entries(S.ai)) saveAI(id, r);
+    $('#mRegBtn').hidden = true;
+    $('#vMeta').innerHTML = `${json.items.length}문제 · <span class="codechip">${esc(code)}</span>`;
+    toast('자동 등록됨 · 칩 코드 ' + code, 3500);
+  }catch(e){ toast('등록은 못 했어요: ' + errMsg(e)); }
+}
+function updatePendingUI(){
+  const sp = $('#slotPdf'), sj = $('#slotJson');
+  sp.classList.toggle('on', !!pending.pdf);
+  sj.classList.toggle('on', !!pending.json);
+  sp.querySelector('span').textContent = pending.pdf ? (pending.merged ? '통합 칩에 포함 ✓' : '준비됨 ✓') : '아직 없음';
+  sj.querySelector('span').textContent = pending.json ? (pending.merged ? '통합 칩 ✓' : pending.embedded ? '칩 PDF 안에 있음 ✓' : '준비됨 ✓') : '아직 없음';
+  const ok = !!(pending.pdf && pending.json);
+  $('#viewBtn').disabled = !ok;
+  $('#regBtn').disabled = !ok || !canStore();
+  const info = $('#pendInfo');
+  if (pending.json){
+    info.hidden = false;
+    info.innerHTML = `<b>${esc(pending.json.title || '제목 없음')}</b> · ${pending.json.items.length}문제` +
+      (pending.json.code ? ` · <span class="codechip">${esc(pending.json.code)}</span>` : '');
+  } else info.hidden = true;
+  $('#autoBtn').hidden = !(pending.pdf && !pending.json && cap.sample);
+  $('#clearBtn').hidden = !(pending.pdf || pending.json);
+}
+$('#clearBtn').onclick = () => { pending.pdf = null; pending.json = null; pending.merged = false; pending.embedded = false; $('#jsonPaste').value = ''; $('#autoNote').hidden = true; updatePendingUI(); };
+
+/* 붙여넣기 */
+let pasteT;
+$('#jsonPaste').addEventListener('input', e => {
+  clearTimeout(pasteT);
+  pasteT = setTimeout(() => {
+    const v = e.target.value.trim();
+    if (!v){ if (!pending.merged){ pending.json = null; updatePendingUI(); } return; }
+    try{ pending.json = parseChipText(v); pending.merged = false; updatePendingUI(); toast('칩 JSON 인식 완료'); }
+    catch(err){ pending.json = null; updatePendingUI(); toast('아직 JSON으로 못 읽었어요: ' + err.message); }
+  }, 500);
+});
+
+/* 프롬프트 */
+function buildPromptB(){
+  const title = $('#gTitle').value.trim() || '[과제 제목]';
+  const list = $('#gList').value.trim() || '[문제 번호 목록]';
+  return `너는 "과제 솔빙 뷰어"용 칩 JSON을 만드는 조교야.
+첨부한 PDF는 과제 문제 캡처와 풀이집 풀이 캡처를 모아 놓은 거야. 페이지 번호는 1부터 센다.
+
+과제 제목: ${title}
+문제 목록: ${list}
+
+할 일
+1. 모든 페이지를 보고 각 페이지가 어느 문제 번호의 '문제'인지 '풀이'인지 판단해. 한 문제가 여러 페이지면 모두 넣어.
+2. 문제마다 풀이집을 보지 않은 것처럼 먼저 직접 풀어서 최종 답을 구해.
+3. 그다음 풀이집의 답과 중간 과정을 비교해 검증해 (부호, 단위, 숫자 계산, 공식 적용, 조건 누락).
+   "verify.status": 같으면 "ok", 다르면 "mismatch", 이미지가 흐리거나 확신이 없으면 "unsure".
+   "verify.note": 일치하면 무엇을 확인했는지 한 줄, 다르면 어느 단계에서 왜 다른지.
+4. "key": 이 문제의 핵심을 한 줄로.
+5. "answer": 풀이집의 최종 답만 짧게.
+6. "explain": 학생이 손으로 직접 풀 수 있게 한국어 단계별 해설. 풀이집에서 생략된 중간 계산도 채워.
+   구성: ### 핵심 개념 / ### 풀이 단계 (1. 2. 3.) / ### 최종 답 / ### 자주 하는 실수
+   풀이집이 틀렸다고 판단되면 풀이 단계는 올바른 풀이로 쓰고 끝에 ### 풀이집과 다른 점 추가.
+7. "overview": 과제 전체를 훑어보는 요약. 구성: ### 이번 과제 핵심 개념 / ### 공식 정리 / ### 검증 결과 (다르거나 확인 필요한 문제 먼저) / ### 풀 때 주의할 점 / ### 추천 풀이 순서
+8. 수식은 LaTeX: 인라인 $...$, 독립 수식 $$...$$. JSON 문자열 안이므로 역슬래시는 반드시 두 번 (\\\\frac, \\\\Omega), 줄바꿈은 \\n.
+9. 이미지에 없는 내용은 지어내지 마. 못 찾은 문제는 pages를 []로, status는 "unsure"로.
+10. 문제 목록 순서대로, 아래 형식의 JSON 하나만 코드 블록으로 답해. 다른 말은 쓰지 마. 답이 길어서 끊기면 내가 "계속"이라고 할 테니 이어서 써.
+
+형식
+{
+  "format": "hw-chip-v1",
+  "title": "${title}",
+  "overview": "### 이번 과제 핵심 개념\\n- ...\\n### 공식 정리\\n...",
+  "items": [
+    {
+      "id": "12.1(a)",
+      "problem_pages": [1],
+      "solution_pages": [2],
+      "key": "RC 회로 시정수 = RC",
+      "answer": "$\\\\tau = 10\\\\,\\\\text{ms}$",
+      "verify": { "status": "ok", "my_answer": "$\\\\tau = 10\\\\,\\\\text{ms}$", "manual_answer": "$\\\\tau = 10\\\\,\\\\text{ms}$", "note": "단위 환산과 곱셈 확인, 일치" },
+      "explain": "### 핵심 개념\\n...\\n### 풀이 단계\\n1. ...\\n### 최종 답\\n...\\n### 자주 하는 실수\\n- ..."
+    }
+  ]
+}`;
+}
+function buildPrompt(){
+  const title = $('#gTitle').value.trim() || '[과제 제목]';
+  const list = $('#gList').value.trim() || '[문제 번호 목록]';
+  const kit = $('#chipkitSrc').textContent.trim();
+  return `너는 "과제 솔빙 뷰어"용 칩 PDF를 만드는 조교야. 파이썬 코드 실행과 파일 만들기를 써서 끝까지 직접 해 줘. 중간에 나한테 묻지 말고 진행해.
+
+첨부: ① 교재 PDF  ② 답지(솔루션) PDF
+과제 제목: ${title}
+문제 번호: ${list}
+
+순서
+1. 맨 아래 chipkit.py를 파일로 저장하고 import chipkit as ck 해. (pdfplumber, pypdfium2, pypdf, Pillow 사용)
+2. ck.has_text()로 두 PDF에 글자 정보가 있는지 확인해.
+   - 있으면: 문제마다 ck.find(path, 번호)로 위치 후보를 보고, ck.auto_box(path, 번호, pick=, pages=)로 영역을 잡아 ck.save_crop()으로 잘라.
+     같은 번호가 여러 곳(본문 예제, 다른 장)에 나오면 그 장의 연습문제(Problems/Exercises) 구역에 있는 것을 골라.
+   - 없으면(스캔본): ck.sheet()로 썸네일을 보고 문제가 있는 쪽을 찾은 뒤, ck.render() 눈금 이미지를 보고 (page, top, bottom, left, right)를 정해서 ck.save_crop(path, [seg], out)으로 잘라.
+3. 잘라 낸 이미지는 하나도 빠짐없이 직접 열어서 눈으로 확인해: 문제 번호·본문·그림·표·소문항이 다 들어 있고 다음 문제가 섞이지 않았는지. 잘렸거나 넘치면 좌표를 고쳐 다시 잘라. 여러 쪽에 걸친 문제는 조각을 모두 넣어.
+4. 답지에서도 같은 방법으로 각 문제의 풀이를 잘라서 확인해. 소문항만 내준 문제(예: 12.1(a))도 문제는 전체를 자르고 id는 그대로 둬.
+5. 검증: 문제마다 답지를 보기 전에 먼저 직접 풀어서 최종 답을 구하고, 그다음 답지의 답·중간 과정(부호, 단위, 계산, 공식, 조건)과 비교해.
+   verify = {"status": 같으면 "ok" / 다르면 "mismatch" / 확신 없으면 "unsure", "my_answer": 직접 구한 답, "manual_answer": 답지 답, "note": 확인한 것 또는 어느 단계에서 왜 다른지}
+6. 문제마다 작성: key(이 문제의 핵심 한 줄), answer(답지 최종 답), explain(한국어 단계별 해설: ### 핵심 개념 / ### 풀이 단계 1. 2. 3. / ### 최종 답 / ### 자주 하는 실수. 답지가 틀렸으면 풀이 단계는 올바른 풀이로 쓰고 ### 답지와 다른 점 추가)
+7. overview(과제 전체 요약): ### 이번 과제 핵심 개념 / ### 공식 정리 / ### 검증 결과 (다르거나 확인 필요한 문제 먼저) / ### 풀 때 주의할 점 / ### 추천 풀이 순서
+8. 수식은 LaTeX(인라인 $...$, 독립 수식 $$...$$). 파이썬에서는 r"..." 문자열로 써서 역슬래시가 깨지지 않게 해.
+9. items = [{"id": 번호, "problem": [문제 png들], "solution": [답지 png들], "key", "answer", "verify", "explain"}, ...] 를 문제 번호 순서대로 만들고
+   ck.build(items, "${title.replace(/[^0-9A-Za-z가-힣]+/g,'_') || 'chip'}_칩", title="${title}", overview=overview) 로 칩 PDF를 만들어서 파일로 줘. 칩 정보가 PDF 안에 들어가니 PDF 하나면 돼.
+10. 마지막에 표로 요약: 문제 번호 | 교재 쪽(PDF 기준) | 답지 쪽 | 검증 결과. 못 찾았거나 자신 없는 문제는 숨기지 말고 말해.
+
+chipkit.py
+\`\`\`python
+${kit}
+\`\`\``;
+}
+function refreshPrompt(){
+  $('#gPrompt').value = buildPrompt();
+  ls.set('hwv-guide', { t: $('#gTitle').value, l: $('#gList').value });
+}
+{ const g = ls.get('hwv-guide', {}); $('#gTitle').value = g.t || ''; $('#gList').value = g.l || ''; }
+$('#gTitle').addEventListener('input', refreshPrompt);
+$('#gList').addEventListener('input', refreshPrompt);
+refreshPrompt();
+async function copyText(text, btn, label){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }catch{}
+  if (!ok){
+    const ta = $('#gPrompt'); const keep = ta.value; ta.value = text; ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    try{ ok = document.execCommand('copy'); }catch{}
+    if (ok) ta.value = keep;
+  }
+  if (ok){ btn.textContent = '복사됨 ✓'; setTimeout(() => btn.textContent = label, 1800); }
+  else toast('자동 복사가 막혔어요. 프롬프트 칸이 선택돼 있으니 길게 눌러 복사하세요', 4000);
+}
+$('#copyBtn').onclick = () => copyText(buildPrompt(), $('#copyBtn'), '프롬프트 복사');
+$('#copyBtnB').onclick = () => copyText(buildPromptB(), $('#copyBtnB'), '캡처 PDF용 프롬프트 복사');
+
+/* 이 앱에서 AI로 칩 JSON 만들기 */
+$('#autoBtn').onclick = async () => {
+  if (!cap.sample || !pending.pdf) return;
+  const btn = $('#autoBtn'), note = $('#autoNote');
+  btn.disabled = true; note.hidden = false;
+  try{
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pending.pdf.slice(0)) }).promise;
+    const N = doc.numPages, BATCH = 4, pagesInfo = [];
+    const list = $('#gList').value.trim();
+    for (let s = 1; s <= N; s += BATCH){
+      const e = Math.min(N, s + BATCH - 1);
+      note.innerHTML = `<span class="spin"></span>페이지 ${s}–${e} / ${N} 읽는 중…`;
+      const imgs = [];
+      for (let p = s; p <= e; p++) imgs.push(await renderPage(p, 1100, 'image/jpeg', doc));
+      const q = `첨부 이미지는 과제 PDF의 ${s}~${e}페이지를 순서대로 담은 것이다.
+각 페이지가 어떤 문제 번호의 "문제"인지 "풀이"(풀이집 해설)인지 판단해라.${list ? `\n과제 문제 목록: ${list} (이 표기 그대로 id를 써라)` : ''}
+JSON 배열만 답해: [{"page": 페이지번호, "kind": "problem" | "solution" | "other", "id": "문제 번호 예: 12.1(a)"}]`;
+      const r = await cap.sample(q, { images: imgs, modelTier: 'default' });
+      const m = r.text.match(/\[[\s\S]*\]/);
+      if (m){ try{ pagesInfo.push(...JSON.parse(m[0])); }catch{} }
+    }
+    const order = [], map = {};
+    for (const pg of pagesInfo){
+      if (!pg || pg.kind === 'other' || !pg.id) continue;
+      const id = String(pg.id).trim();
+      if (!map[id]){ map[id] = { id, problem_pages: [], solution_pages: [], answer: '', explain: '' }; order.push(id); }
+      (pg.kind === 'solution' ? map[id].solution_pages : map[id].problem_pages).push(+pg.page);
+    }
+    if (list){
+      const want = list.split(/[,\s]+/).filter(Boolean);
+      order.sort((a, b) => { const ia = want.indexOf(a), ib = want.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+    }
+    if (!order.length) throw new Error('문제를 찾지 못했어요');
+    pending.json = { format: 'hw-chip-v1', title: $('#gTitle').value.trim() || '과제', items: order.map(id => map[id]) };
+    pending.merged = false;
+    $('#jsonPaste').value = JSON.stringify(pending.json, null, 1);
+    note.textContent = `${order.length}문제를 찾았어요. 잘못 묶인 게 있으면 위 칸의 JSON을 고치면 돼요.`;
+  }catch(e){
+    note.textContent = e?.code === 'rate_limited' ? 'AI 요청이 많아요. 잠시 후 다시 눌러 주세요.' : '만들지 못했어요: ' + (e?.message || e);
+  }
+  btn.disabled = false; updatePendingUI();
+};
+$('#fileIn').addEventListener('change', e => { takeFiles([...e.target.files]); e.target.value=''; });
+const drop = $('#drop');
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => takeFiles([...e.dataTransfer.files]));
+
+$('#viewBtn').onclick = () => openChip(pending.json, pending.pdf, { code: pending.json.code || null, registered:false });
+$('#regBtn').onclick = async () => {
+  const btn = $('#regBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>등록 중';
+  try{
+    const code = await registerChip(pending.json, pending.pdf);
+    const note = $('#regNote'); note.hidden = false;
+    note.innerHTML = `등록 완료! 칩 코드 <span class="codechip">${esc(code)}</span>`;
+    await openChip(pending.json, pending.pdf, { code, registered:true });
+  }catch(e){ toast(errMsg(e)); }
+  btn.textContent = '등록하고 보기'; updatePendingUI();
+};
+
+/* ---------- storage (assets + db) ---------- */
+function normCode(c){ return String(c||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,40); }
+function genCode(title){
+  const al='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r=''; for (let i=0;i<4;i++) r += al[Math.floor(Math.random()*al.length)];
+  const d = (String(title||'').match(/\d+/)||[''])[0].slice(0,3);
+  return `CH${d||'X'}-${r}`;
+}
+const chipsCol = () => cap.db.collection('data/users/' + cap.uid);
+const safeId = id => { const s = String(id).replace(/[^A-Za-z0-9_.~:@+-]/g,'_'); return /^\.+$/.test(s) ? '_'+s : s; };
+function errMsg(e){
+  const c = e?.code;
+  if (c === 'quota_exceeded') return '저장 공간이 가득 찼어요. 안 쓰는 칩을 지워 주세요.';
+  if (c === 'resource_exhausted' || c === 'rate_limited') return '잠시 후 다시 시도해 주세요.';
+  return '문제가 생겼어요: ' + (e?.message || e);
+}
+async function registerChip(json, pdfBuf){
+  if (!canStore()) throw new Error('저장을 쓸 수 없는 환경');
+  const code = normCode(json.code) || genCode(json.title);
+  json.code = code;
+  const pdfA = await cap.assets.upload(new Blob([pdfBuf.slice(0)], {type:'application/pdf'}));
+  const jsonA = await cap.assets.upload(new Blob([JSON.stringify(json)], {type:'application/json'}));
+  const ref = chipsCol().doc(code);
+  const old = await ref.get();
+  await ref.set({ code, title: json.title || '', count: json.items.length, pdf: pdfA.id, json: jsonA.id, created: Date.now() });
+  if (old.exists) toast('같은 코드의 칩을 새 내용으로 바꿨어요');
+  loadMyChips();
+  return code;
+}
+async function fetchBlob(id){
+  if (cap.local){ const b = await cap.assets.get(id); if (!b) throw new Error('파일을 불러오지 못했어요'); return new Response(b); }
+  const r = await fetch('/_blob/' + encodeURIComponent(id));
+  if (!r.ok) throw new Error('파일을 불러오지 못했어요');
+  return r;
+}
+async function openByCode(raw){
+  const code = normCode(raw);
+  if (!code) return;
+  if (!canStore()) return toast('여기서는 코드 열기를 쓸 수 없어요');
+  const btn = $('#codeBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  try{
+    const snap = await chipsCol().doc(code).get();
+    if (!snap.exists){ toast('그 코드의 칩이 없어요'); return; }
+    const row = snap.data();
+    const [pr, jr] = await Promise.all([fetchBlob(row.pdf), fetchBlob(row.json)]);
+    const [pdfBuf, json] = await Promise.all([pr.arrayBuffer(), jr.json()]);
+    await openChip(json, pdfBuf, { code, registered:true });
+  }catch(e){ toast(errMsg(e)); }
+  finally{ btn.disabled = false; btn.textContent = '열기'; }
+}
+$('#codeBtn').onclick = () => openByCode($('#codeIn').value);
+$('#codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') openByCode(e.target.value); });
+
+async function loadMyChips(){
+  if (!cap.db) return;
+  try{
+    const snap = await chipsCol().orderBy('created','desc').limit(100).get();
+    const ul = $('#myList'); ul.innerHTML = '';
+    $('#myCard').hidden = snap.empty;
+    for (const d of snap.docs){
+      const r = d.data();
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="t"><b>${esc(r.title || r.code)}</b><span>${r.count}문제 · ${new Date(r.created).toLocaleDateString('ko-KR')}</span></div>
+        <span class="codechip">${esc(r.code)}</span><button class="del">삭제</button>`;
+      li.querySelector('.t').onclick = () => openByCode(r.code);
+      li.querySelector('.codechip').onclick = () => openByCode(r.code);
+      const del = li.querySelector('.del');
+      del.onclick = async () => {
+        if (!del.classList.contains('armed')){ del.classList.add('armed'); del.textContent='정말 삭제?';
+          setTimeout(()=>{ del.classList.remove('armed'); del.textContent='삭제'; }, 3500); return; }
+        try{
+          await chipsCol().doc(r.code).delete();
+          if (cap.assets){ cap.assets.delete(r.pdf).catch(()=>{}); cap.assets.delete(r.json).catch(()=>{}); }
+          toast('삭제했어요'); loadMyChips();
+        }catch(e){ toast(errMsg(e)); }
+      };
+      ul.appendChild(li);
+    }
+  }catch(e){ /* 조용히 무시 */ }
+}
+
+/* ---------- open / viewer ---------- */
+const OV = -1; // 전체 훑어보기 탭
+async function openChip(json, pdfBuf, { code, registered }){
+  try{
+    S.pdfBytes = pdfBuf.slice(0);
+    S.pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuf.slice(0)) }).promise;
+  }catch(e){ toast('PDF를 열지 못했어요'); return; }
+  stopRun();
+  S.cache.forEach(u => URL.revokeObjectURL(u)); S.cache.clear();
+  S.chip = json; S.code = code; S.registered = registered;
+  S.ai = {}; S.overview = json.overview || ''; S.chats = {}; S.solOpen = {}; S.open = {}; S.filter = 'all';
+  const pos = ls.get('hwv-pos-' + (code||json.title), OV);
+  S.idx = Math.max(OV, Math.min(pos, json.items.length - 1));
+  if (registered && cap.db){
+    try{
+      const snap = await chipsCol().doc(code).collection('exp').get();
+      snap.docs.forEach(d => {
+        const v = d.data(); if (!v || v.id == null) return;
+        if (v.id === '__overview'){ S.overview = v.overview || S.overview; return; }
+        S.ai[v.id] = { explain: v.explain || v.text || '', verify: v.verify || null, key: v.key || '' };
+      });
+    }catch{}
+  }
+  $('#home').hidden = true; $('#viewer').hidden = false; $('#menu').hidden = true;
+  $('#vTitle').textContent = json.title || '과제';
+  $('#vMeta').innerHTML = `${json.items.length}문제` + (code ? ` · <span class="codechip">${esc(code)}</span>` : '');
+  $('#mRegBtn').hidden = registered || !canStore();
+  $('#mDlBtn').hidden = !cap.downloads;
+  buildTabs(); renderItem(); window.scrollTo(0,0);
+}
+/* 칩 원본 + AI 결과 합친 보기 */
+function V(it){
+  const a = S.ai[it.id] || {};
+  return { ...it, explain: a.explain || it.explain || '', verify: a.verify || it.verify || null, key: a.key || it.key || '',
+           aiMade: !!a.explain };
+}
+const ST = {
+  ok:       { t:'✓ 일치',     c:'ok' },
+  mismatch: { t:'⚠ 풀이집과 다름', c:'bad' },
+  unsure:   { t:'? 확인 필요', c:'mid' },
+  none:     { t:'미검증',      c:'none' }
+};
+const stOf = v => (v.verify && ST[v.verify.status]) ? v.verify.status : 'none';
+const badge = st => `<span class="badge ${ST[st].c}">${ST[st].t}</span>`;
+
+function doneKey(){ return 'hwv-done-' + (S.code || S.chip.title); }
+function buildTabs(){
+  const done = ls.get(doneKey(), {});
+  const nav = $('#tabs'); nav.innerHTML = '';
+  const ov = document.createElement('button');
+  ov.className = 'tab ovtab' + (S.idx === OV ? ' cur' : ''); ov.textContent = '전체'; ov.onclick = () => go(OV);
+  nav.appendChild(ov);
+  S.chip.items.forEach((it, i) => {
+    const st = stOf(V(it));
+    const b = document.createElement('button');
+    b.className = 'tab' + (i === S.idx ? ' cur' : '') + (done[it.id] ? ' done' : '') + (st === 'mismatch' || st === 'unsure' ? ' warn' : '');
+    b.textContent = it.id; b.onclick = () => go(i);
+    nav.appendChild(b);
+  });
+  nav.children[S.idx + 1]?.scrollIntoView({ inline:'center', block:'nearest' });
+}
+function go(i){
+  if (i < OV || i >= S.chip.items.length) return;
+  S.idx = i; ls.set('hwv-pos-' + (S.code || S.chip.title), i);
+  buildTabs(); renderItem(); window.scrollTo({ top:0 });
+}
+
+/* page rendering */
+function targetWidth(){
+  const w = Math.min($('#vmain').clientWidth || 600, 900) * Math.min(window.devicePixelRatio || 1, 2.5);
+  return Math.max(600, Math.min(2000, Math.round(w / 200) * 200));
+}
+async function renderPage(n, width, type='image/png', doc=S.pdf){
+  const page = await doc.getPage(n);
+  const v1 = page.getViewport({ scale:1 });
+  const vp = page.getViewport({ scale: width / v1.width });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+  await page.render({ canvas, viewport: vp }).promise;
+  return await new Promise(r => canvas.toBlob(r, type, 0.88));
+}
+async function pageURL(n){
+  const w = targetWidth(), key = n + '@' + w;
+  if (!S.cache.has(key)) S.cache.set(key, URL.createObjectURL(await renderPage(n, w, 'image/jpeg')));
+  return S.cache.get(key);
+}
+async function fillPages(el, pages){
+  if (!pages?.length){ el.innerHTML = '<div class="ph">이미지 없음</div>'; return; }
+  el.innerHTML = pages.map(() => '<div class="ph"><span><span class="spin"></span>불러오는 중</span></div>').join('');
+  const token = S.renderToken;
+  for (let k = 0; k < pages.length; k++){
+    let url; try{ url = await pageURL(pages[k]); }catch{ url = null; }
+    if (token !== S.renderToken) return;
+    const slot = el.children[k];
+    if (!url){ slot.innerHTML = '페이지를 그리지 못했어요'; continue; }
+    const img = new Image(); img.src = url; img.alt = '페이지 ' + pages[k];
+    img.onclick = () => openZoom(url);
+    slot.replaceWith(img);
+  }
+}
+
+/* ---------- markdown + math ---------- */
+function md(src){
+  const math = [];
+  let s = String(src || '').replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$/g,
+    m => { math.push(m); return '\u0000' + (math.length - 1) + '\u0000'; });
+  s = esc(s);
+  const inline = t => t.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const out = []; let para = [], list = null;
+  const flushP = () => { if (para.length){ out.push('<p>' + inline(para.join('<br>')) + '</p>'); para = []; } };
+  const flushL = () => { if (list){ out.push(`<${list.t}>` + list.items.map(x => '<li>' + inline(x) + '</li>').join('') + `</${list.t}>`); list = null; } };
+  for (const line of s.split('\n')){
+    let m;
+    if ((m = line.match(/^\s*#{1,6}\s+(.*)$/))){ flushP(); flushL(); out.push('<h4>' + inline(m[1]) + '</h4>'); }
+    else if ((m = line.match(/^\s*[-*•]\s+(.*)$/))){ flushP(); if (!list || list.t !== 'ul'){ flushL(); list = { t:'ul', items:[] }; } list.items.push(m[1]); }
+    else if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))){ flushP(); if (!list || list.t !== 'ol'){ flushL(); list = { t:'ol', items:[] }; } list.items.push(m[1]); }
+    else if (!line.trim()){ flushP(); flushL(); }
+    else { if (list){ list.items[list.items.length-1] += '<br>' + line.trim(); } else para.push(line); }
+  }
+  flushP(); flushL();
+  return out.join('').replace(/\u0000(\d+)\u0000/g, (_, i) => esc(math[+i]));
+}
+function setMD(el, text){
+  el.innerHTML = md(text);
+  if (window.renderMathInElement){
+    try{
+      window.renderMathInElement(el, { throwOnError:false, delimiters:[
+        {left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},
+        {left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}] });
+    }catch{}
+  }
+}
+
+/* ---------- AI ---------- */
+const BASE = `너는 공대 전공과목 조교다. 첨부 이미지는 순서대로 [문제 이미지들] 다음 [풀이집 풀이 이미지들]이다.
+수식은 LaTeX로, 인라인은 $...$, 독립 수식은 $$...$$ 로 쓴다. 이미지에 없는 내용을 지어내지 말 것.`;
+const REVIEW = `${BASE}
+
+할 일
+1) 먼저 풀이집을 보지 않은 것처럼 문제를 직접 풀어 최종 답을 구하라.
+2) 풀이집의 최종 답과 중간 과정을 비교해 검증하라 (부호, 단위, 숫자 계산, 공식 적용, 문제 조건 누락).
+3) 학생이 손으로 직접 풀 수 있게 한국어 단계별 해설을 써라. 풀이집에서 생략된 중간 계산을 채워라.
+
+다른 말 없이 JSON 하나만 답하라. JSON 문자열 안이므로 역슬래시는 두 번(\\\\frac), 줄바꿈은 \\n.
+{"key":"이 문제의 핵심을 한 줄로",
+ "verify":{"status":"ok | mismatch | unsure","my_answer":"직접 구한 최종 답","manual_answer":"풀이집 최종 답","note":"일치하면 무엇을 확인했는지 한 줄, 다르면 어느 단계에서 왜 다른지"},
+ "explain":"### 핵심 개념\\n...\\n### 풀이 단계\\n1. ...\\n### 최종 답\\n...\\n### 자주 하는 실수\\n- ..."}
+- status: 답이 같으면 ok, 다르면 mismatch, 이미지가 흐리거나 조건이 부족해 확신이 없으면 unsure.
+- 풀이집이 틀렸다고 판단되면 explain의 풀이 단계는 올바른 풀이로 쓰고 끝에 "### 풀이집과 다른 점"을 추가하라.`;
+
+function hasEscapeDamage(o){
+  return /[\f\b]|\t[a-z]|\r[a-z]/.test(collectStr(o));
+}
+function collectStr(o){ return typeof o === 'string' ? o : (o && typeof o === 'object') ? Object.values(o).map(collectStr).join(' ') : ''; }
+function parseLoose(text){
+  let t = String(text || '');
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (fence) t = fence[1];
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b < a) throw new Error('JSON을 찾지 못했어요');
+  t = t.slice(a, b + 1);
+  let o = null; try{ o = JSON.parse(t); }catch{}
+  if (!o || hasEscapeDamage(o)) o = JSON.parse(fixLatexEscapes(t));
+  return o;
+}
+async function itemImages(it){
+  const pages = [...(it.problem_pages||[]), ...(it.solution_pages||[])];
+  return Promise.all(pages.map(n => renderPage(n, 1400, 'image/jpeg')));
+}
+function aiError(e){
+  if (e?.code === 'not_granted') { cap.sample = null; return 'AI 사용이 허용되지 않았어요.'; }
+  if (e?.code === 'rate_limited') return 'AI 요청이 많아요. 잠시 후 다시 눌러 주세요.';
+  if (e?.code === 'unauthorized') return '다시 로그인해 주세요.';
+  if (cap.local && e?.message) return 'AI 오류: ' + e.message;
+  return 'AI가 답을 만들지 못했어요. 다시 시도해 주세요.';
+}
+function saveAI(id, obj){
+  if (S.registered && cap.db)
+    chipsCol().doc(S.code).collection('exp').doc(safeId(id)).set({ id, ...obj, at: Date.now() }).catch(()=>{});
+}
+/* 한 문제: 직접 풀어서 검증 + 해설 */
+async function reviewItem(it){
+  const images = await itemImages(it);
+  const res = await cap.sample(`${REVIEW}\n\n문제 번호: ${it.id}` + (it.answer ? `\n풀이집 정답(칩에 적힌 값): ${it.answer}` : ''),
+    { images, modelTier:'complex' });
+  let o;
+  try{ o = parseLoose(res.text); }catch{ o = { explain: res.text, verify: { status:'unsure', note:'검증 결과 형식을 읽지 못했어요' } }; }
+  const v = o.verify && typeof o.verify === 'object' ? o.verify : null;
+  if (v && !ST[v.status]) v.status = 'unsure';
+  const r = { explain: String(o.explain || ''), verify: v, key: String(o.key || '') };
+  S.ai[it.id] = r; saveAI(it.id, r);
+  return r;
+}
+
+/* 전체 검증 실행 (2개씩 병렬) */
+S.run = null;
+function stopRun(){ if (S.run) S.run.stop = true; S.run = null; }
+async function runAll(force){
+  if (!cap.sample || S.run) return;
+  const todo = S.chip.items.filter(it => force || stOf(V(it)) === 'none');
+  if (!todo.length){ toast('이미 모두 검증했어요'); return; }
+  const run = S.run = { total: todo.length, done: 0, fail: 0, stop: false, cur: new Set() };
+  const chip = S.chip;
+  refreshOverview();
+  let next = 0;
+  async function worker(){
+    while (!run.stop && next < todo.length){
+      const it = todo[next++];
+      run.cur.add(it.id); refreshOverview();
+      let ok = false;
+      for (let attempt = 0; attempt < 2 && !ok && !run.stop; attempt++){
+        try{ await reviewItem(it); ok = true; }
+        catch(e){
+          if (e?.code === 'not_granted'){ cap.sample = null; run.stop = true; toast(aiError(e)); }
+          else if (e?.code === 'rate_limited' && attempt === 0){ await new Promise(r => setTimeout(r, 20000)); }
+          else break;
+        }
+      }
+      run.cur.delete(it.id); run.done++; if (!ok) run.fail++;
+      if (S.chip === chip){ buildTabs(); refreshOverview(); }
+    }
+  }
+  await Promise.all([worker(), worker()]);
+  if (S.run === run) S.run = null;
+  if (S.chip !== chip) return;
+  if (!run.stop && run.done - run.fail > 0) await makeOverview(true);
+  if (run.fail) toast(`${run.fail}문제는 실패했어요. 다시 실행하면 그 문제만 해요.`, 4000);
+  buildTabs(); refreshOverview();
+}
+
+/* 과제 전체 요약 */
+async function makeOverview(quiet){
+  if (!cap.sample) return;
+  S.ovBusy = true; refreshOverview();
+  const lines = S.chip.items.map(it => {
+    const v = V(it), vf = v.verify || {};
+    return `## ${it.id}\n핵심: ${v.key || '-'}\n풀이집 답: ${vf.manual_answer || it.answer || '-'}\nAI 답: ${vf.my_answer || '-'}\n검증: ${vf.status || '미검증'} ${vf.note || ''}\n해설 일부: ${(v.explain || '').slice(0, 700)}`;
+  }).join('\n\n');
+  try{
+    const res = await cap.sample(`너는 공대 전공과목 조교다. 아래는 과제 "${S.chip.title || ''}"의 문제별 검증 결과와 해설이다.
+학생이 과제를 시작하기 전에 한 번 훑어볼 요약을 한국어 마크다운으로 써라. 수식은 LaTeX($...$, $$...$$).
+### 이번 과제 핵심 개념  (3~6개, 각 한 줄)
+### 공식 정리  (이 과제에 실제로 쓰이는 공식만)
+### 검증 결과  (풀이집과 다르거나 확인이 필요한 문제를 먼저, 문제 번호와 이유를 짧게. 모두 일치하면 그렇다고)
+### 풀 때 주의할 점  (단위, 부호, 자주 틀리는 부분)
+### 추천 풀이 순서  (쉬운 것부터, 개념이 이어지는 순서로)
+
+${lines}`, { modelTier:'default', cache:false });
+    S.overview = res.text; saveAI('__overview', { overview: res.text });
+  }catch(e){ if (!quiet) toast(aiError(e)); }
+  S.ovBusy = false; refreshOverview();
+}
+
+async function ask(it, q, chatEl, inputEl, sendBtn){
+  if (!cap.sample || !q.trim()) return;
+  const hist = S.chats[it.id] ||= [];
+  hist.push({ role:'user', content:q.trim() });
+  inputEl.value = ''; sendBtn.disabled = true;
+  drawChat(it, chatEl);
+  const live = document.createElement('div'); live.className = 'msg ai';
+  live.innerHTML = '<div class="md"><span class="spin"></span>생각 중…</div>'; chatEl.appendChild(live);
+  const v = V(it);
+  const ctx = `${BASE}\n문제 번호: ${it.id}` +
+    (v.explain ? `\n\n[이미 학생에게 보여준 해설]\n${v.explain}` : '') +
+    (v.verify ? `\n\n[검증 결과] ${v.verify.status} / AI 답: ${v.verify.my_answer || ''} / ${v.verify.note || ''}` : '') +
+    `\n\n이제 학생의 질문에 짧고 정확하게 답해라. 질문한 부분만 집중해서 설명.`;
+  const msgs = hist.map((m, i) => i === 0 ? { role:'user', content: ctx + '\n\n학생 질문: ' + m.content } : m);
+  try{
+    const images = await itemImages(it);
+    let last = 0;
+    const res = await cap.sample(msgs, { images, cache:false,
+      onText: ({ text }) => { const now = Date.now(); if (now - last > 250){ last = now; setMD(live.firstChild, text); } } });
+    hist.push({ role:'assistant', content: res.text });
+  }catch(e){ hist.pop(); toast(aiError(e)); }
+  sendBtn.disabled = false;
+  drawChat(it, chatEl);
+}
+function drawChat(it, el){
+  el.innerHTML = '';
+  for (const m of S.chats[it.id] || []){
+    const d = document.createElement('div'); d.className = 'msg ' + (m.role === 'user' ? 'me' : 'ai');
+    if (m.role === 'user') d.textContent = m.content;
+    else { const b = document.createElement('div'); b.className = 'md'; d.appendChild(b); setMD(b, m.content); }
+    el.appendChild(d);
+  }
+}
+
+/* ---------- 전체 훑어보기 ---------- */
+function counts(){
+  const c = { ok:0, mismatch:0, unsure:0, none:0 };
+  S.chip.items.forEach(it => c[stOf(V(it))]++);
+  return c;
+}
+function refreshOverview(){ if (S.chip && S.idx === OV && !$('#viewer').hidden) renderItem(true); }
+function renderOverview(main){
+  const c = counts(), n = S.chip.items.length, run = S.run;
+  const checked = n - c.none;
+  const done = ls.get(doneKey(), {});
+  const nDone = S.chip.items.filter(it => done[it.id]).length;
+  let act = '';
+  if (run) act = `<div class="runline"><span class="spin"></span>검증·해설 중 ${run.done}/${run.total}` +
+      (run.cur.size ? ` · 지금: ${esc([...run.cur].join(', '))}` : '') + `</div><button id="stopBtn" class="btn ghost">중지</button>`;
+  else if (cap.sample) act = c.none
+      ? `<button id="runBtn" class="btn">전체 검증 + 해설 실행 (${c.none}문제)</button>`
+      : `<button id="rerunBtn" class="btn ghost">전부 다시 검증</button>`;
+  const flagged = c.mismatch + c.unsure;
+  main.innerHTML = `
+    <div class="qhead"><h2>전체 훑어보기</h2><span class="sub">${nDone}/${n} 완료</span></div>
+    <div class="sec"><div class="sech">답안 검증 현황<small>${checked}/${n} 검증</small></div>
+      <div class="stats">
+        <div class="stat ok"><b>${c.ok}</b><span>일치</span></div>
+        <div class="stat bad"><b>${c.mismatch}</b><span>풀이집과 다름</span></div>
+        <div class="stat mid"><b>${c.unsure}</b><span>확인 필요</span></div>
+        <div class="stat none"><b>${c.none}</b><span>미검증</span></div>
+      </div>
+      <div class="bar"><i class="ok" style="width:${c.ok/n*100}%"></i><i class="bad" style="width:${c.mismatch/n*100}%"></i><i class="mid" style="width:${c.unsure/n*100}%"></i></div>
+      <div class="secact col">${act}
+        <p class="note" style="margin:0">AI가 문제마다 직접 풀어 보고 풀이집 답과 비교한 뒤 해설을 써요. ${!S.registered && canStore() ? '<b>칩을 등록해 두면 결과가 저장돼요.</b>' : ''}</p></div>
+    </div>
+    <div class="sec"><div class="sech">과제 요약<small>${S.ovBusy ? '<span class="spin"></span>만드는 중' : ''}</small></div>
+      <div id="ov" class="md"></div><div id="ovAct" class="secact"></div></div>
+    <div class="sec"><div class="sech">문제별 한눈에
+        <span class="seg"><button data-f="all" class="${S.filter==='all'?'on':''}">전체</button><button data-f="flag" class="${S.filter==='flag'?'on':''}">⚠ ${flagged}</button></span></div>
+      <div id="olist"></div></div>`;
+  const ov = $('#ov'), ovAct = $('#ovAct');
+  if (S.overview) setMD(ov, S.overview);
+  else ov.innerHTML = `<div class="empty" style="padding:6px 0">${checked ? '요약이 아직 없어요.' : '전체 검증을 실행하면 이번 과제의 핵심 개념, 공식, 검증 결과, 주의할 점을 정리해 드려요.'}</div>`;
+  if (cap.sample && checked && !S.ovBusy && !run){
+    ovAct.innerHTML = `<button class="btn ghost">${S.overview ? '요약 다시 만들기' : '요약 만들기'}</button>`;
+    ovAct.firstChild.onclick = () => makeOverview(false);
+  }
+  const list = $('#olist');
+  S.chip.items.forEach((it, i) => {
+    const v = V(it), st = stOf(v);
+    if (S.filter === 'flag' && !(st === 'mismatch' || st === 'unsure')) return;
+    const row = document.createElement('div'); row.className = 'orow' + (S.open[it.id] ? ' open' : '');
+    const working = run?.cur.has(it.id);
+    row.innerHTML = `<button class="ohead">
+        <span class="oid">${esc(it.id)}${done[it.id] ? ' <i class="dot"></i>' : ''}</span>
+        ${working ? '<span class="badge none"><span class="spin"></span>검증 중</span>' : badge(st)}
+        <span class="okey">${esc(v.key || (v.explain ? '' : '해설 없음'))}</span></button>
+      <div class="obody"></div>`;
+    row.querySelector('.ohead').onclick = () => { S.open[it.id] = !S.open[it.id]; renderItem(true); };
+    if (S.open[it.id]){
+      const body = row.querySelector('.obody');
+      body.innerHTML = `${answerGrid(v)}<div class="md oexp"></div>
+        <div class="secact"><button class="btn">이 문제 열기</button></div>`;
+      fillAnswerGrid(body, v);
+      const ex = body.querySelector('.oexp');
+      if (v.explain) setMD(ex, v.explain); else ex.innerHTML = '<div class="empty" style="padding:0">해설이 없어요.</div>';
+      body.querySelector('.secact .btn').onclick = () => go(i);
+    }
+    list.appendChild(row);
+  });
+  if (!list.children.length) list.innerHTML = '<div class="empty">표시할 문제가 없어요.</div>';
+  main.querySelectorAll('.seg button').forEach(b => b.onclick = () => { S.filter = b.dataset.f; renderItem(true); });
+  $('#runBtn') && ($('#runBtn').onclick = () => runAll(false));
+  $('#rerunBtn') && ($('#rerunBtn').onclick = () => runAll(true));
+  $('#stopBtn') && ($('#stopBtn').onclick = () => { if (S.run) S.run.stop = true; toast('지금 하던 문제까지만 하고 멈춰요'); });
+}
+function answerGrid(v){
+  const vf = v.verify || {};
+  const manual = vf.manual_answer || v.answer;
+  if (!manual && !vf.my_answer && !vf.note) return '';
+  return `<div class="agrid">
+    ${manual ? `<span class="al">풀이집 답</span><div class="md a-man"></div>` : ''}
+    ${vf.my_answer ? `<span class="al">AI 검산</span><div class="md a-ai"></div>` : ''}
+    ${vf.note ? `<span class="al">검증 메모</span><div class="md a-note"></div>` : ''}
+  </div>`;
+}
+function fillAnswerGrid(root, v){
+  const vf = v.verify || {};
+  const m = root.querySelector('.a-man'); if (m) setMD(m, vf.manual_answer || v.answer);
+  const a = root.querySelector('.a-ai'); if (a) setMD(a, vf.my_answer);
+  const n = root.querySelector('.a-note'); if (n) setMD(n, vf.note);
+}
+
+/* ---------- 문제 하나 ---------- */
+function renderItem(keepScroll){
+  if (!S.chip) return;
+  const y = window.scrollY;
+  S.renderToken = Symbol();
+  const main = $('#vmain');
+  if (S.idx === OV){ renderOverview(main); if (keepScroll) window.scrollTo(0, y); return; }
+  const it = S.chip.items[S.idx], v = V(it), st = stOf(v);
+  const done = ls.get(doneKey(), {});
+  const autoSol = ls.get('hwv-autosol', false);
+  const solShown = autoSol || S.solOpen[it.id];
+  const working = S.run?.cur.has(it.id) || S.busy === it.id;
+  main.innerHTML = `
+    <div class="qhead"><h2>${esc(it.id)}</h2>
+      <button id="doneBtn" class="donebtn ${done[it.id] ? 'on' : ''}">${done[it.id] ? '✓ 완료' : '완료 표시'}</button></div>
+    ${v.key ? `<p class="keyline">${esc(v.key)}</p>` : ''}
+    <div class="sec"><div class="sech">문제<small>탭하면 확대</small></div><div id="pgP" class="pages"></div></div>
+    <div class="sec"><div class="sech">풀이집<small>${solShown ? '탭하면 확대' : '먼저 풀어 보고 열기'}</small></div>
+      <div class="cover"><div id="pgS" class="pages"></div>
+      ${solShown ? '' : '<div class="veil"><button id="showSol" class="btn">풀이 보기</button></div>'}</div></div>
+    <div class="sec vsec ${ST[st].c}"><div class="sech">답안 검증 ${working ? '<span class="badge none"><span class="spin"></span>검증 중</span>' : badge(st)}</div>
+      <div id="agrid">${answerGrid(v) || '<div class="empty">아직 검증하지 않았어요.</div>'}</div></div>
+    <div class="sec"><div class="sech">해설${v.aiMade ? '<small>AI 검증 후 작성</small>' : ''}</div>
+      <div id="exp" class="md"></div><div id="expAct" class="secact"></div></div>
+    <div class="sec" id="askSec"><div class="sech">이 문제 질문하기</div>
+      <div id="chat" class="chat"></div>
+      <div class="ask"><input id="askIn" placeholder="예: 2번째 단계에서 왜 KVL을 이렇게 써?" enterkeyhint="send">
+      <button id="askBtn" class="btn">질문</button></div></div>
+    <div class="pn">
+      <button id="prevBtn" class="btn ghost">${S.idx === 0 ? '‹ 전체' : '‹ 이전 문제'}</button>
+      <button id="nextBtn" class="btn ghost" ${S.idx === S.chip.items.length - 1 ? 'disabled' : ''}>다음 문제 ›</button>
+    </div>`;
+  fillPages($('#pgP'), it.problem_pages);
+  fillPages($('#pgS'), it.solution_pages);
+  fillAnswerGrid($('#agrid'), v);
+
+  const expBox = $('#exp'), act = $('#expAct');
+  if (v.explain) setMD(expBox, v.explain);
+  else expBox.innerHTML = `<div class="empty" style="padding:6px 0">${cap.sample ? 'AI가 직접 풀어서 풀이집과 비교하고, 단계별 해설을 써 드려요.' : '이 칩에는 해설이 없어요.'}</div>`;
+  if (cap.sample && !working){
+    act.innerHTML = `<button class="btn ${v.explain && v.verify ? 'ghost' : ''}">${v.explain && v.verify ? '다시 검증 + 해설' : 'AI 검증 + 해설 만들기'}</button>`;
+    act.firstChild.onclick = async () => {
+      S.busy = it.id; renderItem(true);
+      try{ await reviewItem(it); }catch(e){ toast(aiError(e)); }
+      S.busy = null; buildTabs(); if (S.chip.items[S.idx] === it) renderItem(true);
+    };
+  } else if (working) act.innerHTML = '<span class="empty" style="padding:0"><span class="spin"></span>AI가 직접 풀고 풀이집과 비교하는 중… (30초~1분)</span>';
+
+  $('#askSec').hidden = !cap.sample;
+  const chatEl = $('#chat'); drawChat(it, chatEl);
+  const askIn = $('#askIn'), askBtn = $('#askBtn');
+  askBtn.onclick = () => ask(it, askIn.value, chatEl, askIn, askBtn);
+  askIn.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) ask(it, askIn.value, chatEl, askIn, askBtn); };
+
+  $('#doneBtn').onclick = () => { const d = ls.get(doneKey(), {}); d[it.id] = !d[it.id]; ls.set(doneKey(), d); buildTabs(); renderItem(true); };
+  const sb = $('#showSol'); if (sb) sb.onclick = () => { S.solOpen[it.id] = true; renderItem(true); };
+  $('#prevBtn').onclick = () => go(S.idx - 1);
+  $('#nextBtn').onclick = () => go(S.idx + 1);
+  if (keepScroll) window.scrollTo(0, y);
+}
+
+/* ---------- viewer chrome ---------- */
+$('#backBtn').onclick = () => { $('#viewer').hidden = true; $('#home').hidden = false; S.renderToken = Symbol(); loadMyChips(); };
+$('#menuBtn').onclick = () => { $('#menu').hidden = !$('#menu').hidden; };
+$('#autoSol').checked = ls.get('hwv-autosol', false);
+$('#autoSol').onchange = e => { ls.set('hwv-autosol', e.target.checked); renderItem(true); };
+$('#mRegBtn').onclick = async () => {
+  const b = $('#mRegBtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>등록 중';
+  try{
+    const code = await registerChip(S.chip, S.pdfBytes);
+    S.code = code; S.registered = true; b.hidden = true;
+    for (const [id, r] of Object.entries(S.ai)) saveAI(id, r);
+    if (S.overview) saveAI('__overview', { overview: S.overview });
+    $('#vMeta').innerHTML = `${S.chip.items.length}문제 · <span class="codechip">${esc(code)}</span>`;
+    toast('등록 완료! 칩 코드 ' + code, 4000);
+  }catch(e){ toast(errMsg(e)); }
+  b.disabled = false; b.textContent = '이 칩 등록하기';
+};
+$('#mDlBtn').onclick = async () => {
+  if (!cap.downloads) return;
+  const merged = { ...S.chip, overview: S.overview || S.chip.overview || '',
+    items: S.chip.items.map(it => { const v = V(it); return { id: it.id, problem_pages: it.problem_pages, solution_pages: it.solution_pages,
+      answer: it.answer || '', key: v.key, verify: v.verify, explain: v.explain }; }),
+    pdf_base64: bufToB64(S.pdfBytes) };
+  const name = (S.chip.title || 'chip').replace(/[\\/:*?"<>|]/g,'_') + '_통합칩.json';
+  try{ await cap.downloads.save({ filename: name, data: new Blob([JSON.stringify(merged)]) }); }
+  catch(e){ if (e?.code !== 'declined') toast('파일을 저장하지 못했어요'); }
+};
+
+/* ---------- zoom ---------- */
+let zl = 1; const ZL = [1, 1.5, 2, 3];
+function openZoom(url){ zl = 1; $('#zImg').src = url; applyZoom(); $('#zoom').hidden = false; }
+function applyZoom(){ $('#zImg').style.width = (ZL[zl] * 100) + '%'; }
+$('#zIn').onclick = () => { zl = Math.min(ZL.length - 1, zl + 1); applyZoom(); };
+$('#zOut').onclick = () => { zl = Math.max(0, zl - 1); applyZoom(); };
+$('#zClose').onclick = () => { $('#zoom').hidden = true; };
+$('#zImg').ondblclick = () => { zl = zl ? 0 : 2; applyZoom(); };
+
+document.addEventListener('keydown', e => {
+  if ($('#viewer').hidden || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') go(S.idx + 1);
+  if (e.key === 'ArrowLeft') go(S.idx - 1);
+  if (e.key === 'Escape') $('#zoom').hidden = true;
+});
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (S.chip && !$('#viewer').hidden) renderItem(true); }, 400); });
+</script>
+</body>
+</html>
